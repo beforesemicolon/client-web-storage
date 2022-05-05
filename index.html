@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport"
+	      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+</head>
+<body>
+	<script src="./dist/client-store.min.js"></script>
+	<script>
+		const {ClientStore, Schema} = window;
+		
+		const todoStore = new ClientStore("todo", new Schema("todo", {
+			name: new SchemaValue(String, "todo"),
+			description: new SchemaValue(String),
+			selected: new SchemaValue(Boolean),
+			state: new SchemaValue(String),
+			createdDate: new SchemaValue(Date),
+			lastUpdatedDate: new SchemaValue(Date),
+		}), {appName: "My App"}, () => {
+			console.log('--', todoStore.type, todoStore.ready);
+		});
+		
+		// todoStore.createItem({
+		// 	name: "Go to gym"
+		// })
+		
+		// todoStore.getItems()
+		// 	.then(console.log)
+		
+		// todoStore.findAllItems((item) => item._id === 3302731580736 || item._id === 8256828743585)
+		// 	.then(console.log)
+		
+		// todoStore.updateItem(1651365749360, {
+		// 	name: "Do homework",
+		// 	description: "Do my homework when i get home"
+		// })
+		
+	</script>
+</body>
+</html>
