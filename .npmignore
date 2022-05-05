@@ -1,0 +1,21 @@
+*.local
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+src
+tsconfig.json
+docs
+**.tgz
+**/*.spec.ts
+coverage
+jest.config.js
+.github
+**.js.map
+index.html

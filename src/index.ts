@@ -1,2 +1,2 @@
 export {Schema, SchemaValue, SchemaId} from './Schema';
-export {ClientStore} from './ClientStore';
+export {ClientStore, ClientStoreEventType, ClientStoreType} from './ClientStore';

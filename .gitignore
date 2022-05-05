@@ -12,6 +12,7 @@ dist/*
 !dist/client-store.min.js
 !dist/client-store.min.js.map
 *.local
+*.tgz
 
 # Editor directories and files
 .vscode/*
@@ -23,4 +24,6 @@ dist/*
 *.njsproj
 *.sln
 *.sw?
+
+# test
 coverage
