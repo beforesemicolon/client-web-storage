@@ -8,9 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
-!dist/client-store.min.js
-!dist/client-store.min.js.map
 *.local
 
 # Editor directories and files
