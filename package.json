@@ -1,5 +1,5 @@
 {
-  "name": "client-store",
+  "name": "@beforesemicolon/client-store",
   "description": "Web browser (client) storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with Schema validation.",
   "version": "1.0.0-beta",
   "main": "dist/index.js",
