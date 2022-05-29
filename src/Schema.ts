@@ -138,9 +138,15 @@ export class Schema {
 		lastUpdatedDate: new SchemaValue(Date, false),
 	};
 	#name: string;
+	#includeDefaultKeys = true;
 	
-	constructor(name: string, obj: Schema.Map | null = null) {
+	constructor(name: string, obj: Schema.Map | null = null, includeDefaultKeys = true) {
 		this.#name = name;
+		this.#includeDefaultKeys  = includeDefaultKeys;
+		
+		if (!includeDefaultKeys) {
+			this.#obj = {};
+		}
 		
 		if (obj) {
 			for (let objKey in obj) {
@@ -159,6 +165,10 @@ export class Schema {
 	
 	get name() {
 		return this.#name;
+	}
+	
+	get includeDefaultKeys() {
+		return this.#includeDefaultKeys;
 	}
 	
 	get defaultKeys() {
@@ -282,20 +292,27 @@ export class Schema {
 	
 	toValue() {
 		const nowDate = new Date();
-		const obj: { [k: string]: any } = {
+		
+		const obj: { [k: string]: any } = this.includeDefaultKeys ? {
+			// set default key values
 			id: (new SchemaId()).value,
 			createdDate: nowDate,
 			lastUpdatedDate: nowDate,
-		};
+		} : {};
 		
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey) && !this.defaultKeys.includes(mapKey)) {
 				const val = this.#obj[mapKey];
-
-				if (val.type instanceof Schema) {
-					obj[mapKey] = val.type.toValue();
-				} else {
-					obj[mapKey] = val.defaultValue;
+				
+				switch (true) {
+					case val.type instanceof Schema:
+						obj[mapKey] = (val.type as Schema).toValue();
+						break;
+					case val.type instanceof Date:
+						obj[mapKey] = val.defaultValue ?? new Date();
+						break;
+					default:
+						obj[mapKey] = val.defaultValue;
 				}
 			}
 		}

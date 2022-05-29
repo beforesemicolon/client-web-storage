@@ -32,12 +32,15 @@ export const ClientStoreType = {
 	MEMORY_STORAGE
 }
 
+export type storeSubscriber = (eventType: ClientStoreEventType, id?: number | null) => void;
+export type storeUnSubscriber = () => void;
+
 export class ClientStore {
 	#store: LocalForage;
 	#config: ClientStore.Config;
 	#storeName: string;
 	#schema: Schema;
-	#subscribers: ((eventType: ClientStoreEventType, id?: number | null) => void)[] = [];
+	#subscribers: storeSubscriber[] = [];
 	#ready = false;
 	#size = 0;
 	
@@ -90,9 +93,13 @@ export class ClientStore {
 		this.#subscribers.forEach(sub => sub(eventType, id))
 	}
 	
-	subscribe(listener: () => void) {
-		if (typeof listener === 'function') {
-			this.#subscribers.push(listener)
+	subscribe(sub: storeSubscriber): storeUnSubscriber {
+		if (typeof sub === 'function') {
+			this.#subscribers.push(sub)
+		}
+		
+		return () => {
+			this.#subscribers = this.#subscribers.filter(s => s !== sub)
 		}
 	}
 	

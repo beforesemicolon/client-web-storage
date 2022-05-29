@@ -1,4 +1,4 @@
-import {ClientStore, ClientStoreEventType} from "./ClientStore";
+import {ClientStore, ClientStoreEventType, storeSubscriber, storeUnSubscriber} from "./ClientStore";
 import localforage from 'localforage';
 import {Schema, SchemaValue} from "./Schema";
 import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
@@ -20,11 +20,16 @@ describe('ClientStore', () => {
 	const onReady = jest.fn();
 	const onChange = jest.fn();
 	let todoStore: ClientStore;
+	let unsub: storeUnSubscriber;
 	
 	beforeAll(async () => {
 		await localforage.defineDriver(MemoryStore());
 		todoStore = new ClientStore("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"}, onReady);
-		todoStore.subscribe(onChange);
+		unsub = todoStore.subscribe(onChange);
+	})
+	
+	afterAll(() => {
+		unsub();
 	})
 	
 	it('should create store', () => {
