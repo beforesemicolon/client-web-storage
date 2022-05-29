@@ -1,5 +1,5 @@
-# Client Store
-Web browser (client) storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with Schema validation.
+# Client Web Storage
+Browser storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with Schema and data validator.
 
 ## Installation
 

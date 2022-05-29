@@ -1,10 +1,10 @@
 {
-  "name": "@beforesemicolon/client-store",
+  "name": "client-web-storage",
   "description": "Web browser (client) storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with Schema validation.",
   "version": "1.1.0-beta",
   "main": "dist/index.js",
   "repository": {
-    "url": "https://github.com/beforesemicolon/client-store",
+    "url": "https://github.com/beforesemicolon/client-web-storage",
     "type": "git"
   },
   "keywords": [
@@ -19,8 +19,8 @@
   "author": "Elson Correia",
   "license": "MIT",
   "scripts": {
-    "build:client": "esbuild src/client.ts --bundle --minify --keep-names --sourcemap --target=es2020 --outfile=dist/client-store.min.js",
-    "build:client-local": "esbuild src/client.ts --bundle --target=es2020 --outfile=dist/client-store.min.js",
+    "build:client": "esbuild src/client.ts --bundle --minify --keep-names --sourcemap --target=es2020 --outfile=dist/client-web-storage.min.js",
+    "build:client-local": "esbuild src/client.ts --bundle --target=es2020 --outfile=dist/client-web-storage.min.js",
     "build": "tsc --noEmit && rm -rf dist && npm run build:client && tsc",
     "build:local": "tsc --noEmit && rm -rf dist && npm run build:client-local && tsc",
     "local": "nodemon --watch src -e ts --exec npm run build:local",
