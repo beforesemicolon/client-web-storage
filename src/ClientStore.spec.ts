@@ -1,7 +1,6 @@
 import {ClientStore} from "./ClientStore";
-import localforage from 'localforage';
 import {Schema, SchemaValue} from "./Schema";
-import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+import {MEMORY_STORAGE} from "./MemoryStore";
 import StoreUnSubscriber = ClientStore.StoreUnSubscriber;
 
 describe('ClientStore', () => {
@@ -35,7 +34,6 @@ describe('ClientStore', () => {
 	let unsub: StoreUnSubscriber;
 	
 	beforeAll(async () => {
-		await localforage.defineDriver(MemoryStore());
 		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"});
 		unsub = todoStore.subscribe(onChange);
 	})
@@ -50,6 +48,50 @@ describe('ClientStore', () => {
 		expect(todoStore.name).toBe('Test-todo');
 		expect(todoStore.ready).toBe(true);
 		expect(onChange).toHaveBeenCalledWith("ready", null)
+	});
+	
+	it('should load items', async () => {
+		const user = {
+			...userSchema.toValue(),
+			name: "John Doe"
+		}
+		await todoStore.loadItems([
+			{name: "Go Shopping", user},
+			{name: "Go To Gym", user}
+		]);
+		
+		let items = await todoStore.getItems();
+		
+		expect(items).toHaveLength(2)
+		expect(items).toEqual([
+			expect.objectContaining({
+				name: "Go Shopping",
+				description: ""
+			}),
+			expect.objectContaining({
+				name: "Go To Gym",
+				description: "",
+			})
+		])
+		
+		await todoStore.loadItems([
+			...items,
+			{...items[0], description: "Buy milk and bread"}
+		]);
+		
+		items = await todoStore.getItems();
+
+		expect(items).toHaveLength(2)
+		expect(items).toEqual([
+			expect.objectContaining({
+				name: "Go Shopping",
+				description: "Buy milk and bread"
+			}),
+			expect.objectContaining({
+				name: "Go To Gym",
+				description: "",
+			})
+		])
 	});
 	
 	it('should CRUD item', async () => {

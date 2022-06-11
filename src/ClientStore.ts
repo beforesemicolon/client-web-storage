@@ -1,10 +1,12 @@
 import localforage, {LOCALSTORAGE, WEBSQL, INDEXEDDB} from 'localforage';
 import {Schema} from "./Schema";
-import {MEMORY_STORAGE} from "./MemoryStore";
+import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+
+localforage.defineDriver(MemoryStore());
 
 const defaultConfig = {
 	version: 1,
-	type: [INDEXEDDB, WEBSQL, LOCALSTORAGE],
+	type: [INDEXEDDB, WEBSQL, LOCALSTORAGE, MEMORY_STORAGE],
 	description: "",
 	appName: "App",
 }
@@ -71,6 +73,20 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		
 		return () => {
 			this.#subscribers = this.#subscribers.filter(s => s !== sub)
+		}
+	}
+	
+	async loadItems(items: Partial<T>[] = []) {
+		if (items.length) {
+			const keys = new Set(await this.#store.keys());
+			
+			for (let item of items) {
+				if (keys.has(`${item.id}`)) {
+					await this.updateItem(item.id, item);
+				} else {
+					await this.createItem(item);
+				}
+			}
 		}
 	}
 	

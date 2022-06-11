@@ -129,6 +129,33 @@ Will create item
  */
 ```
 
+### Update an Item
+Updating and item is very similar to creating. You can partially update the object with new values. The only thing
+you can't change are the default keys `id`, `createdDate`, and `lastUpdatedDate`.
+
+```ts
+await todoStore.updateItem(todo1.id, {
+  description: "Buy milk, ham and bread"
+});
+```
+
+The store will automatically change the `lastUpdatedDate` date for you.
+
+### Load items
+You may also add items to the store in bulk with the `loadItems` method which will automatically determine
+if the items in the given list must be updated or added to the store.
+
+```ts
+const user = await userStore.createItem({
+    name: "John Doe"
+});
+
+await todoStore.loadItems([
+    {name: "Go Shopping", user},
+    {name: "Go To Gym", user}
+]);
+```
+
 ### Read Items
 To read items you can either do it for a single item or all of them.
 
@@ -144,19 +171,7 @@ each item and this callback must return true or false whether it matches a patte
 ```ts
 await todoStore.findItems((item) => item.name.match('shop'));
 await todoStore.findItem((item) => item.name.match('shop'));
-``` 
-
-### Update an Item
-Updating and item is very similar to creating. You can partially update the object with new values. The only thing
-you can't change are the default keys `id`, `createdDate`, and `lastUpdatedDate`.
-
-```ts
-await todoStore.updateItem(todo1.id, {
-  description: "Buy milk, ham and bread"
-});
 ```
-
-The store will automatically change the `lastUpdatedDate` date for you.
 
 ### Remove Items
 To remove an item, all you need is the item id. You may also clear the entire store.
