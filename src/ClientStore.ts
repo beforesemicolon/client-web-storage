@@ -6,7 +6,7 @@ localforage.defineDriver(MemoryStore());
 
 const defaultConfig = {
 	version: 1,
-	type: [INDEXEDDB, WEBSQL, LOCALSTORAGE],
+	type: [INDEXEDDB, WEBSQL, LOCALSTORAGE, MEMORY_STORAGE],
 	description: "",
 	appName: "App",
 }
