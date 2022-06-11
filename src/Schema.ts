@@ -170,10 +170,10 @@ export class Schema<T extends Schema.DefaultValue> {
 		return null
 	}
 	
-	isValidFieldValue(name: keyof T, value: any = null): boolean {
-		if (this.#obj.hasOwnProperty(name)) {
-			const val = this.#obj[`${name}`];
-			
+	isValidFieldValue(name: string | keyof T, value: any = null): boolean {
+		const val = this.getField(`${name}`) as SchemaValue;
+		
+		if (val) {
 			if (value instanceof Array && value.some(v => !isSupportedTypeValue(v))) {
 				return false;
 			}

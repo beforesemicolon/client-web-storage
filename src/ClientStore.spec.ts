@@ -30,14 +30,13 @@ describe('ClientStore', () => {
 		state: new SchemaValue(String),
 	});
 	
-	const onReady = jest.fn();
 	const onChange = jest.fn();
 	let todoStore: ClientStore<ToDo>;
 	let unsub: StoreUnSubscriber;
 	
 	beforeAll(async () => {
 		await localforage.defineDriver(MemoryStore());
-		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"}, onReady);
+		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"});
 		unsub = todoStore.subscribe(onChange);
 	})
 	
@@ -50,7 +49,7 @@ describe('ClientStore', () => {
 		expect(todoStore.type).toBe(MEMORY_STORAGE);
 		expect(todoStore.name).toBe('Test-todo');
 		expect(todoStore.ready).toBe(true);
-		expect(onReady).toHaveBeenCalled()
+		expect(onChange).toHaveBeenCalledWith("ready", null)
 	});
 	
 	it('should CRUD item', async () => {
@@ -148,12 +147,12 @@ describe('ClientStore', () => {
 		
 		expect(notfoundItem).toBeNull();
 		
-		const allItems = await todoStore.findAllItems((item) => {
+		const allItems = await todoStore.findItems((item) => {
 			return /gym|school/i.test(item.name);
 		});
 		
 		expect(allItems).toHaveLength(2);
-		expect(await todoStore.findAllItems((item) => {
+		expect(await todoStore.findItems((item) => {
 			return /nothing/i.test(item.name);
 		})).toHaveLength(0);
 		

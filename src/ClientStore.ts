@@ -18,8 +18,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	#ready = false;
 	#size = 0;
 	
-	constructor(storeName: string, schema: Schema<T>, config: ClientStore.Config = defaultConfig, whenReady = () => {
-	}) {
+	constructor(storeName: string, schema: Schema<T>, config: ClientStore.Config = defaultConfig) {
 		this.#storeName = storeName;
 		this.#config = {...defaultConfig, ...config};
 		
@@ -41,9 +40,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		this.#store.ready(() => {
 			console.info(`[Info] ClientStore "${storeName}" successfully created`);
 			this.#ready = true;
-			if (typeof whenReady === 'function') {
-				whenReady();
-			}
+			this.#broadcast(ClientStore.EventType.READY, null);
 		})
 	}
 	
@@ -63,7 +60,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		return this.#size;
 	}
 	
-	#broadcast(eventType: ClientStore.EventType, id: number | null = null) {
+	#broadcast(eventType: ClientStore.EventType, id: number | number[] | null = null) {
 		this.#subscribers.forEach(sub => sub(eventType, id))
 	}
 	
@@ -116,6 +113,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		const updatedItem = {
 			...item,
 			...data,
+			createdDate: item.createdDate,
 			lastUpdatedDate: new Date(),
 			id: item.id
 		};
@@ -132,7 +130,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	}
 	
 	async getItems(): Promise<Array<T>> {
-		return this.findAllItems(() => true);
+		return this.findItems(() => true);
 	}
 	
 	getItem(id: T['id']): Promise<T | null> {
@@ -146,10 +144,11 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		})
 	}
 	
-	clear() {
+	async clear() {
+		const keys: number[] = (await this.#store.keys()).map(Number);
 		return this.#store.clear().then(async () => {
 			this.#size = await this.#store.length();
-			this.#broadcast(ClientStore.EventType.CLEAR);
+			this.#broadcast(ClientStore.EventType.CLEAR, keys);
 		})
 	}
 	
@@ -162,7 +161,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		}) || null;
 	}
 	
-	async findAllItems(cb: (value: T, key: string) => boolean = () => false) {
+	async findItems(cb: (value: T, key: string) => boolean = () => false) {
 		const items: T[] = [];
 		
 		await this.#store.iterate<T, any>((value, key) => {
@@ -176,7 +175,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 }
 
 export namespace ClientStore {
-	export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | null) => void;
+	export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | number[] | null) => void;
 	
 	export type StoreUnSubscriber = () => void;
 	
@@ -188,6 +187,7 @@ export namespace ClientStore {
 	}
 	
 	export enum EventType {
+		READY = "ready",
 		CREATE = "created",
 		DELETE = "deleted",
 		UPDATE = "updated",
