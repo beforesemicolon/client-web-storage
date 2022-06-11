@@ -1,7 +1,6 @@
 import {ClientStore} from "./ClientStore";
-import localforage from 'localforage';
 import {Schema, SchemaValue} from "./Schema";
-import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+import {MEMORY_STORAGE} from "./MemoryStore";
 import StoreUnSubscriber = ClientStore.StoreUnSubscriber;
 
 describe('ClientStore', () => {
@@ -35,7 +34,6 @@ describe('ClientStore', () => {
 	let unsub: StoreUnSubscriber;
 	
 	beforeAll(async () => {
-		await localforage.defineDriver(MemoryStore());
 		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"});
 		unsub = todoStore.subscribe(onChange);
 	})

@@ -1,6 +1,8 @@
 import localforage, {LOCALSTORAGE, WEBSQL, INDEXEDDB} from 'localforage';
 import {Schema} from "./Schema";
-import {MEMORY_STORAGE} from "./MemoryStore";
+import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+
+localforage.defineDriver(MemoryStore());
 
 const defaultConfig = {
 	version: 1,
