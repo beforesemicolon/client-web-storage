@@ -1,14 +1,27 @@
-import {ClientStore, ClientStoreEventType, storeSubscriber, storeUnSubscriber} from "./ClientStore";
+import {ClientStore, StoreUnSubscriber} from "./ClientStore";
 import localforage from 'localforage';
 import {Schema, SchemaValue} from "./Schema";
 import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
 
 describe('ClientStore', () => {
-	const userSchema = new Schema("user", {
+	interface User extends Schema.DefaultValue {
+		name: string;
+		avatar: string;
+	}
+	
+	interface ToDo extends Schema.DefaultValue {
+		name: string;
+		description: string;
+		user: User;
+		selected: boolean;
+		state: string;
+	}
+	
+	const userSchema = new Schema<User>("user", {
 		name: new SchemaValue(String, true),
 		avatar: new SchemaValue(String),
 	});
-	const todoSchema = new Schema("todo", {
+	const todoSchema = new Schema<ToDo>("todo", {
 		name: new SchemaValue(String, true),
 		description: new SchemaValue(String),
 		user: new SchemaValue(userSchema, true),
@@ -16,15 +29,14 @@ describe('ClientStore', () => {
 		state: new SchemaValue(String),
 	});
 	
-	
 	const onReady = jest.fn();
 	const onChange = jest.fn();
-	let todoStore: ClientStore;
-	let unsub: storeUnSubscriber;
+	let todoStore: ClientStore<ToDo>;
+	let unsub: StoreUnSubscriber;
 	
 	beforeAll(async () => {
 		await localforage.defineDriver(MemoryStore());
-		todoStore = new ClientStore("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"}, onReady);
+		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"}, onReady);
 		unsub = todoStore.subscribe(onChange);
 	})
 	
@@ -49,7 +61,7 @@ describe('ClientStore', () => {
 		await expect(todoStore.createItem({
 			name: "Buy groceries",
 			user: {}
-		})).rejects.toThrowError('Failed to create item. Field(s) "user.name" do not match the schema:')
+		} as any)).rejects.toThrowError('Failed to create item. Field(s) "user.name" do not match the schema:')
 		
 		// create
 		let newTodo = await todoStore.createItem({
@@ -57,7 +69,7 @@ describe('ClientStore', () => {
 			user: {
 				name: "John Doe"
 			}
-		})
+		} as any)
 		
 		expect(newTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
@@ -71,7 +83,7 @@ describe('ClientStore', () => {
 				"name": "John Doe",
 			}
 		}))
-		expect(onChange).toHaveBeenCalledWith(ClientStoreEventType.CREATE, newTodo.id)
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.CREATE, newTodo.id)
 		
 		// read
 		await expect(todoStore.getItem(newTodo.id as any)).resolves.toEqual(newTodo)
@@ -79,10 +91,10 @@ describe('ClientStore', () => {
 		// update
 		await expect(todoStore.updateItem(newTodo.id, {
 			new: "unknown prop"
-		})).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "new" is unknown or has invalid value type: null`)
+		} as any)).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "new" is unknown or has invalid value type: null`)
 		await expect(todoStore.updateItem(newTodo.id, {
 			description: 120
-		})).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "description" is unknown or has invalid value type:`);
+		} as any)).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "description" is unknown or has invalid value type:`);
 		
 		const updatedTodo = await todoStore.updateItem(newTodo.id, {
 			description: "need to get milk and bread",
@@ -101,7 +113,7 @@ describe('ClientStore', () => {
 				"name": "John Doe"
 			}
 		}))
-		expect(onChange).toHaveBeenCalledWith(ClientStoreEventType.UPDATE, newTodo.id);
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.UPDATE, newTodo.id);
 		expect(updatedTodo.lastUpdatedDate).not.toEqual(newTodo.lastUpdatedDate);
 		expect(updatedTodo.createdDate).toEqual(newTodo.createdDate);
 		expect(updatedTodo.id).toEqual(newTodo.id);

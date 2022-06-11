@@ -9,42 +9,19 @@ const defaultConfig = {
 	appName: "App",
 }
 
-export namespace ClientStore {
-	export interface Config {
-		appName?: string;
-		version?: LocalForageOptions['version'];
-		type?: LocalForageOptions['driver'] | string;
-		description?: LocalForageOptions['description'];
-	}
-}
+export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | null) => void;
+export type StoreUnSubscriber = () => void;
 
-export enum ClientStoreEventType {
-	CREATE = "created",
-	DELETE = "deleted",
-	UPDATE = "updated",
-	CLEAR = "cleared"
-}
-
-export const ClientStoreType = {
-	LOCALSTORAGE,
-	WEBSQL,
-	INDEXEDDB,
-	MEMORY_STORAGE
-}
-
-export type storeSubscriber = (eventType: ClientStoreEventType, id?: number | null) => void;
-export type storeUnSubscriber = () => void;
-
-export class ClientStore {
+export class ClientStore<T extends Schema.DefaultValue> {
 	#store: LocalForage;
 	#config: ClientStore.Config;
 	#storeName: string;
-	#schema: Schema;
-	#subscribers: storeSubscriber[] = [];
+	#schema: Schema<T>;
+	#subscribers: StoreSubscriber[] = [];
 	#ready = false;
 	#size = 0;
 	
-	constructor(storeName: string, schema: Schema, config: ClientStore.Config = defaultConfig, whenReady = () => {
+	constructor(storeName: string, schema: Schema<T>, config: ClientStore.Config = defaultConfig, whenReady = () => {
 	}) {
 		this.#storeName = storeName;
 		this.#config = {...defaultConfig, ...config};
@@ -89,11 +66,11 @@ export class ClientStore {
 		return this.#size;
 	}
 	
-	#broadcast(eventType: ClientStoreEventType, id: number | null = null) {
+	#broadcast(eventType: ClientStore.EventType, id: number | null = null) {
 		this.#subscribers.forEach(sub => sub(eventType, id))
 	}
 	
-	subscribe(sub: storeSubscriber): storeUnSubscriber {
+	subscribe(sub: StoreSubscriber): StoreUnSubscriber {
 		if (typeof sub === 'function') {
 			this.#subscribers.push(sub)
 		}
@@ -103,7 +80,7 @@ export class ClientStore {
 		}
 	}
 	
-	async createItem(value: any) {
+	async createItem(value: Partial<T>) {
 		const invalidFields = this.#schema.getInvalidSchemaDataFields(value);
 		
 		if (!invalidFields.length) {
@@ -111,6 +88,7 @@ export class ClientStore {
 			
 			for (const valueKey in value) {
 				if (value.hasOwnProperty(valueKey) && !this.#schema.defaultKeys.includes(valueKey)) {
+					// @ts-ignore
 					newItem[valueKey] = value[valueKey]
 				}
 			}
@@ -122,7 +100,7 @@ export class ClientStore {
 				console.error(`Failed to create item "${value}"`, error);
 			}
 			
-		  this.#broadcast(ClientStoreEventType.CREATE, newItem.id as number);
+		  this.#broadcast(ClientStore.EventType.CREATE, newItem.id as number);
 			
 			return newItem;
 		}
@@ -130,7 +108,7 @@ export class ClientStore {
 		throw new Error(`Failed to create item. Field(s) "${invalidFields.join(', ')}" do not match the schema: ${this.#schema}`)
 	}
 	
-	async updateItem(id: number, data: any) {
+	async updateItem(id: T['id'], data: Partial<T>) {
 		for (let dataKey in data) {
 			if (data.hasOwnProperty(dataKey) && !this.#schema.defaultKeys.includes(dataKey) && !this.#schema.isValidFieldValue(dataKey, data[dataKey])) {
 				throw new Error(`Failed to update item "${id}". Key "${dataKey}" is unknown or has invalid value type: ${this.#schema.getField(dataKey)}`)
@@ -151,54 +129,77 @@ export class ClientStore {
 			console.error(`Failed to update item "${item}"`, error);
 		}
 		
-		this.#broadcast(ClientStoreEventType.UPDATE, id);
+		this.#broadcast(ClientStore.EventType.UPDATE, id);
 		
 		return updatedItem;
 	}
 	
-	async getItems() {
+	async getItems(): Promise<Array<T | null>> {
 		const keys = await this.#store.keys();
 		return Promise.all(
-			keys.map(key => this.#store.getItem(key))
+			keys.map(key => this.#store.getItem<T>(key))
 		)
 	}
 	
-	getItem(id: number) {
-		return this.#store.getItem(`${id}`)
+	getItem(id: T['id']): Promise<T | null> {
+		return this.#store.getItem<T>(`${id}`);
 	}
 	
-	removeItem(id: number) {
+	removeItem(id: T['id']) {
 		return this.#store.removeItem(`${id}`).then(async () => {
 			this.#size = await this.#store.length();
-			this.#broadcast(ClientStoreEventType.DELETE, id)
+			this.#broadcast(ClientStore.EventType.DELETE, id)
 		})
 	}
 	
 	clear() {
 		return this.#store.clear().then(async () => {
 			this.#size = await this.#store.length();
-			this.#broadcast(ClientStoreEventType.CLEAR);
+			this.#broadcast(ClientStore.EventType.CLEAR);
 		})
 	}
 	
-	async findItem(cb: (value: any, key: string) => boolean = () => false) {
-		return this.#store.iterate((value, key) => {
-			const m = cb(value, key);
-			if (m) {
+	async findItem(cb: (value: T, key: string) => boolean = () => false) {
+		return this.#store.iterate<T, any>((value, key) => {
+			const matched = cb(value, key);
+			if (matched) {
 				return value;
 			}
 		}) || null;
 	}
 	
-	async findAllItems(cb: (value: any, key: string) => boolean = () => false) {
-		const items: any[] = [];
+	async findAllItems(cb: (value: T, key: string) => boolean = () => false) {
+		const items: T[] = [];
 		
-		await this.#store.iterate((value, key) => {
+		await this.#store.iterate<T, any>((value, key) => {
 			if (cb(value, key)) {
 				value && items.push(value)
 			}
 		})
 		
 		return items;
+	}
+}
+
+export namespace ClientStore {
+	export interface Config {
+		appName?: string;
+		version?: LocalForageOptions['version'];
+		type?: LocalForageOptions['driver'] | string;
+		description?: LocalForageOptions['description'];
+	}
+	
+	export enum EventType {
+		CREATE = "created",
+		DELETE = "deleted",
+		UPDATE = "updated",
+		CLEAR = "cleared"
+	}
+	
+	export const Type = {
+		LOCALSTORAGE,
+		WEBSQL,
+		INDEXEDDB,
+		MEMORY_STORAGE
 	}
 }

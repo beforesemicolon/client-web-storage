@@ -1,74 +1,6 @@
 import {isNil} from "./utils/is-nil";
 import {uniqueId} from "./utils/unique-id";
 
-export namespace Schema {
-	interface BlobConstructor {
-		prototype: Blob;
-		
-		new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
-	}
-	
-	interface SchemaIdConstructor {
-		prototype: SchemaId;
-		
-		new(): SchemaId;
-	}
-	
-	export type Type =
-		| Schema
-		| SchemaIdConstructor
-		| DateConstructor
-		| NumberConstructor
-		| StringConstructor
-		| BooleanConstructor
-		| ArrayConstructor
-		| ArrayBufferConstructor
-		| BlobConstructor
-		| Float32ArrayConstructor
-		| Float64ArrayConstructor
-		| Int8ArrayConstructor
-		| Int16ArrayConstructor
-		| Int32ArrayConstructor
-		| Uint8ArrayConstructor
-		| Uint8ClampedArrayConstructor
-		| Uint16ArrayConstructor
-		| Uint32ArrayConstructor;
-	
-	export type ValueType = null
-		| Schema
-		| SchemaId
-		| Date
-		| Number
-		| String
-		| Boolean
-		| Array<ValueType>
-		| ArrayBuffer
-		| Blob
-		| Float32Array
-		| Float64Array
-		| Int8Array
-		| Int16Array
-		| Int32Array
-		| Uint8Array
-		| Uint8ClampedArray
-		| Uint16Array
-		| Uint32Array;
-	
-	export interface JSONValue {
-		type: string | JSON;
-		required: boolean;
-		defaultValue: ValueType;
-	}
-	
-	export interface JSON {
-		[k: string]: JSONValue | JSON
-	}
-	
-	export interface Map {
-		[k: string]: SchemaValue
-	}
-}
-
 export class SchemaId {
 	value = uniqueId();
 }
@@ -109,7 +41,7 @@ const isSameValueType = (type: Schema.Type, value: any) => {
 }
 
 export class SchemaValue {
-	constructor(public type: Schema.Type | Schema, public required = false, public defaultValue: Schema.ValueType = null) {
+	constructor(public type: Schema.Type | Schema<any>, public required = false, public defaultValue: Schema.ValueType = null) {
 		if (defaultValue !== null && !isSameValueType(type, defaultValue)) {
 			throw new Error(`Default value "${defaultValue}" does not match type "${type.name}"`);
 		}
@@ -130,7 +62,7 @@ export class SchemaValue {
 	}
 }
 
-export class Schema {
+export class Schema<T extends Schema.DefaultValue> {
 	#defaultKeys = ["id", "createdDate", "lastUpdatedDate"]
 	#obj: Schema.Map = {
 		id: new SchemaValue(SchemaId, false),
@@ -175,16 +107,16 @@ export class Schema {
 		return this.#defaultKeys;
 	}
 	
-	defineField(name: string, type: Schema.Type, {
+	defineField(name: keyof T, type: Schema.Type, {
 		defaultValue,
 		required
 	}: { defaultValue?: any, required?: boolean } = {defaultValue: null, required: false}) {
-		this.#obj[name] = new SchemaValue(type, required, defaultValue);
+		this.#obj[`${name}`] = new SchemaValue(type, required, defaultValue);
 	}
 	
-	removeField(name: string): void {
+	removeField(name: string | keyof T): void {
 		if (name) {
-			const [first, ...others] = name.split(".");
+			const [first, ...others] = `${name}`.split(".");
 			
 			const field = this.#obj[first];
 			
@@ -200,13 +132,29 @@ export class Schema {
 		}
 	}
 	
-	hasField(name: string) {
-		return this.getField(name) !== null;
+	hasField(name: string | keyof T): boolean {
+		if (name) {
+			const [first, ...others] = `${name}`.split(".");
+			
+			const field = this.#obj[first];
+			
+			if (field) {
+				if (others.length) {
+					if (field.type instanceof Schema) {
+						return field.type.hasField(others.join('.'))
+					}
+				} else {
+					return  this.#obj.hasOwnProperty(first);
+				}
+			}
+		}
+		
+		return false;
 	}
 	
-	getField(name: string): SchemaValue | null {
+	getField(name: string | keyof T): SchemaValue | null {
 		if (name) {
-			const [first, ...others] = name.split(".");
+			const [first, ...others] = `${name}`.split(".");
 			
 			const field = this.#obj[first];
 			
@@ -222,9 +170,9 @@ export class Schema {
 		return null
 	}
 	
-	isValidFieldValue(name: string, value: any = null): boolean {
+	isValidFieldValue(name: keyof T, value: any = null): boolean {
 		if (this.#obj.hasOwnProperty(name)) {
-			const val = this.#obj[name];
+			const val = this.#obj[`${name}`];
 			
 			if (value instanceof Array && value.some(v => !isSupportedTypeValue(v))) {
 				return false;
@@ -249,7 +197,7 @@ export class Schema {
 		
 		for (const valueKey of [...Object.keys(value), ...requiredFields]) {
 			if (!this.defaultKeys.includes(valueKey)) {
-				const schemaVal = this.getField(valueKey);
+				const schemaVal = this.getField(valueKey as keyof T);
 				
 				if (schemaVal?.type instanceof Schema) {
 					const v = value[valueKey];
@@ -263,7 +211,7 @@ export class Schema {
 					continue;
 				}
 				
-				if (!this.isValidFieldValue(valueKey, value[valueKey])) {
+				if (!this.isValidFieldValue(valueKey as keyof T, value[valueKey])) {
 					invalidFields.add(valueKey);
 				}
 			}
@@ -290,7 +238,7 @@ export class Schema {
 		return JSON.stringify(this.toJSON(), null, 4)
 	}
 	
-	toValue() {
+	toValue(): T {
 		const nowDate = new Date();
 		
 		const obj: { [k: string]: any } = this.includeDefaultKeys ? {
@@ -306,7 +254,7 @@ export class Schema {
 				
 				switch (true) {
 					case val.type instanceof Schema:
-						obj[mapKey] = (val.type as Schema).toValue();
+						obj[mapKey] = (val.type as Schema<any>).toValue();
 						break;
 					case val.type instanceof Date:
 						obj[mapKey] = val.defaultValue ?? new Date();
@@ -317,7 +265,7 @@ export class Schema {
 			}
 		}
 		
-		return obj;
+		return obj as T;
 	}
 }
 
@@ -342,4 +290,78 @@ function isSupportedTypeValue(value: any): boolean {
 		Uint16Array,
 		Uint32Array
 	].some(type => value instanceof type || typeof value === type.name.toLowerCase())
+}
+
+export namespace Schema {
+	interface BlobConstructor {
+		prototype: Blob;
+		
+		new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
+	}
+	
+	interface SchemaIdConstructor {
+		prototype: SchemaId;
+		
+		new(): SchemaId;
+	}
+	
+	export type Type =
+		| Schema<any>
+		| SchemaIdConstructor
+		| DateConstructor
+		| NumberConstructor
+		| StringConstructor
+		| BooleanConstructor
+		| ArrayConstructor
+		| ArrayBufferConstructor
+		| BlobConstructor
+		| Float32ArrayConstructor
+		| Float64ArrayConstructor
+		| Int8ArrayConstructor
+		| Int16ArrayConstructor
+		| Int32ArrayConstructor
+		| Uint8ArrayConstructor
+		| Uint8ClampedArrayConstructor
+		| Uint16ArrayConstructor
+		| Uint32ArrayConstructor;
+	
+	export type ValueType = null
+		| Schema<any>
+		| SchemaId
+		| Date
+		| Number
+		| String
+		| Boolean
+		| Array<ValueType>
+		| ArrayBuffer
+		| Blob
+		| Float32Array
+		| Float64Array
+		| Int8Array
+		| Int16Array
+		| Int32Array
+		| Uint8Array
+		| Uint8ClampedArray
+		| Uint16Array
+		| Uint32Array;
+	
+	export interface JSONValue {
+		type: string | JSON;
+		required: boolean;
+		defaultValue: ValueType;
+	}
+	
+	export interface JSON {
+		[k: string]: JSONValue | JSON
+	}
+	
+	export interface Map {
+		[k: string]: SchemaValue
+	}
+	
+	export interface DefaultValue {
+		id?: number;
+		createdDate?: Date;
+		lastUpdatedDate?: Date;
+	}
 }

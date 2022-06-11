@@ -1,5 +1,5 @@
 import {Schema, SchemaValue, SchemaId} from './Schema';
-import {ClientStore, ClientStoreEventType, ClientStoreType} from './ClientStore';
+import {ClientStore} from './ClientStore';
 
 // @ts-ignore
 if (window) {
@@ -11,8 +11,4 @@ if (window) {
 	window.SchemaId = SchemaId;
 	// @ts-ignore
 	window.ClientStore = ClientStore;
-	// @ts-ignore
-	window.ClientStoreEventType = ClientStoreEventType;
-	// @ts-ignore
-	window.ClientStoreType = ClientStoreType;
 }

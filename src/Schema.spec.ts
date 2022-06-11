@@ -33,7 +33,15 @@ describe('SchemaValue', () => {
 
 describe('Schema', () => {
 	describe('should handle simple types', () => {
-		let todoSchema: Schema;
+		interface ToDo extends Schema.DefaultValue {
+			name: string;
+			description: string;
+			userId: number;
+			selected: boolean;
+			state: string;
+		}
+		
+		let todoSchema: Schema<ToDo>;
 		
 		beforeEach(() => {
 			todoSchema = new Schema("todo");
@@ -111,6 +119,7 @@ describe('Schema', () => {
 		
 		it('should check field', () => {
 			expect(todoSchema.hasField("description")).toBeTruthy()
+			// @ts-ignore
 			expect(todoSchema.hasField("deletedDae")).toBeFalsy()
 		});
 		
@@ -155,9 +164,13 @@ describe('Schema', () => {
 	
 	describe("should handle complex types", () => {
 		it('Blob', () => {
+			interface DT extends Schema.DefaultValue {
+				data: Blob;
+			}
+			
 			const blob = new Blob(['<a id="a"><b id="b">hey!</b></a>'], {type: 'text/html'});
 			
-			const blobSchema = new Schema("blob", {
+			const blobSchema = new Schema<DT>("blob", {
 				data: new SchemaValue(Blob)
 			})
 			
@@ -199,7 +212,11 @@ describe('Schema', () => {
 		});
 		
 		it('Array', () => {
-			const arraySchema = new Schema("array", {
+			interface DT extends Schema.DefaultValue {
+				data: [];
+			}
+			
+			const arraySchema = new Schema<DT>("array", {
 				data: new SchemaValue(Array)
 			})
 			
@@ -242,9 +259,13 @@ describe('Schema', () => {
 		});
 		
 		it('Int32Array', () => {
+			interface DT extends Schema.DefaultValue {
+				data: Int32Array;
+			}
+			
 			const in32Array = new Int32Array([12, 45]);
 			
-			const in32ArraySchema = new Schema("in32Array", {
+			const in32ArraySchema = new Schema<DT>("in32Array", {
 				data: new SchemaValue(Int32Array)
 			})
 			
@@ -287,18 +308,29 @@ describe('Schema', () => {
 	})
 	
 	it('should handle nested schemas', () => {
+		interface ToDo extends Schema.DefaultValue {
+			name: string;
+			description: string;
+			user: {
+				name: string;
+				avatar: string;
+			};
+			selected: boolean;
+			state: string;
+		}
+
 		const userSchema = new Schema("user", {
 			name: new SchemaValue(String, true),
 			avatar: new SchemaValue(String),
 		});
-		const todoSchema = new Schema("todo", {
+		const todoSchema = new Schema<ToDo>("todo", {
 			name: new SchemaValue(String, true),
 			description: new SchemaValue(String),
 			user: new SchemaValue(userSchema, true),
 			selected: new SchemaValue(Boolean),
 			state: new SchemaValue(String),
 		});
-		
+
 		expect(todoSchema.toJSON()).toEqual(expect.objectContaining({
 			"createdDate": {
 				"defaultValue": null,
@@ -407,8 +439,11 @@ describe('Schema', () => {
 			"type": "String"
 		})
 		
+		expect(todoSchema.hasField("user.avatar")).toBeTruthy()
+		
 		todoSchema.removeField("user.avatar");
 		
+		expect(todoSchema.hasField("user.avatar")).toBeFalsy()
 		expect(todoSchema.getField("user")?.toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": null,
 			"required": true,
