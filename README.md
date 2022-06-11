@@ -40,7 +40,7 @@ To create a schema you need 3 options where only the first one is required:
 - **object**: the body of the schema;
 - **includeDefaultKeys**: a flag that indicates whether to include default keys: id, createdDate, and updatedDate;
 
-#### initialize Schema
+#### Initialize Schema
 
 ```js
 const todoShema = new Schema("todo");
@@ -60,24 +60,7 @@ const todoShema = new Schema<ToDo>("todo");
 
 This will further ensure you can't set any data not defined by the type provided. It makes it super easier to work with.
 
-##### API definition
-
-| Fields                     | Description                                                                                                              | Property       |
-|----------------------------|--------------------------------------------------------------------------------------------------------------------------|----------------|
-| name                       | The name of the Schema                                                                                                   | yes - readonly |
-| includeDefaultKeys         | Whether the default keys are included                                                                                    | yes - readonly |
-| defaultKeys                | Returns the default keys: id, createdDate, lastUpdatedDate                                                               | yes - readonly |
-| defineField                | Defines a single field by taking the: name, isRequired, {required, defaultValue};                                        | no             |
-| removeField                | Removes a single field by name                                                                                           | no             |
-| hasField                   | Returns whether the field exists by taking the name                                                                      | no             |
-| getField                   | Returns the `SchemaValue` by taking the name                                                                             | no             |
-| isValidFieldValue          | Returns whether the value is valid for a specific field. Takes the name of the field and the value you want to test for. | no             |
-| getInvalidSchemaDataFields | Returns a list of invalid fields and takes an object which partially or entirely represents the Schema                   | no             |
-| toJSON                     | Returns a JSON representation of the `Schema`                                                                            | no             |
-| toValue                    | Returns a object representing the `Schema` with their default and generated values                                       | no             |
-| toString                   | Returns a JSON string representation of the  `Schema`                                                                    | no             |
-
-#### define Schema
+#### Define Schema
 You can define the schema in two ways:
 
 ##### Via constructor:
@@ -142,6 +125,24 @@ todoShema.defineField("name", String, {required: true});
 todoShema.defineField("description", String);
 todoShema.defineField("complete", Boolean);
 ```
+
+##### API definition
+
+| Fields                     | Description                                                                                                              | Property       |
+|----------------------------|--------------------------------------------------------------------------------------------------------------------------|----------------|
+| name                       | The name of the Schema                                                                                                   | yes - readonly |
+| includeDefaultKeys         | Whether the default keys are included                                                                                    | yes - readonly |
+| defaultKeys                | Returns the default keys: id, createdDate, lastUpdatedDate                                                               | yes - readonly |
+| defineField                | Defines a single field by taking the: name, isRequired, {required, defaultValue};                                        | no             |
+| removeField                | Removes a single field by name                                                                                           | no             |
+| hasField                   | Returns whether the field exists by taking the name                                                                      | no             |
+| getField                   | Returns the `SchemaValue` by taking the name                                                                             | no             |
+| isValidFieldValue          | Returns whether the value is valid for a specific field. Takes the name of the field and the value you want to test for. | no             |
+| getInvalidSchemaDataFields | Returns a list of invalid fields and takes an object which partially or entirely represents the Schema                   | no             |
+| toJSON                     | Returns a JSON representation of the `Schema`                                                                            | no             |
+| toValue                    | Returns a object representing the `Schema` with their default and generated values                                       | no             |
+| toString                   | Returns a JSON string representation of the  `Schema`                                                                    | no             |
+
 
 ### ClientStore
 
