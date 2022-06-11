@@ -29,9 +29,9 @@ const {Schema, ClientStore} = window;
 
 ## Get Started
 The library is very small but super powerful. There are only few things to interact with:
-- **[Schema](https://github.com/beforesemicolon/client-web-storage/docs/Schema.md)** : Determines how the data looks like;
-- **[SchemaValue](https://github.com/beforesemicolon/client-web-storage/docs/SchemaValue.md)** : Creates a single value in the schema;
-- **[ClientStore](https://github.com/beforesemicolon/client-web-storage/docs/ClientStore.md)** : Manages the data (CRUD);
+- **[Schema](https://github.com/beforesemicolon/client-web-storage/blob/main/docs/Schema.md)** : Determines how the data looks like;
+- **[SchemaValue](https://github.com/beforesemicolon/client-web-storage/blob/main/docs/SchemaValue.md)** : Creates a single value in the schema;
+- **[ClientStore](https://github.com/beforesemicolon/client-web-storage/blob/main/docs/ClientStore.md)** : Manages the data (CRUD);
 
 ```ts
 // Define schema TS type
