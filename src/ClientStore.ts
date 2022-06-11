@@ -76,6 +76,20 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		}
 	}
 	
+	async loadItems(items: Partial<T>[] = []) {
+		if (items.length) {
+			const keys = new Set(await this.#store.keys());
+			
+			for (let item of items) {
+				if (keys.has(`${item.id}`)) {
+					await this.updateItem(item.id, item);
+				} else {
+					await this.createItem(item);
+				}
+			}
+		}
+	}
+	
 	async createItem(value: Partial<T>) {
 		const invalidFields = this.#schema.getInvalidSchemaDataFields(value);
 		
