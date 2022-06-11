@@ -1,7 +1,8 @@
-import {ClientStore, StoreUnSubscriber} from "./ClientStore";
+import {ClientStore} from "./ClientStore";
 import localforage from 'localforage';
 import {Schema, SchemaValue} from "./Schema";
 import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+import StoreUnSubscriber = ClientStore.StoreUnSubscriber;
 
 describe('ClientStore', () => {
 	interface User extends Schema.DefaultValue {
@@ -95,12 +96,12 @@ describe('ClientStore', () => {
 		await expect(todoStore.updateItem(newTodo.id, {
 			description: 120
 		} as any)).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "description" is unknown or has invalid value type:`);
-		
+
 		const updatedTodo = await todoStore.updateItem(newTodo.id, {
 			description: "need to get milk and bread",
 			id: 328947239487
 		})
-		
+
 		expect(updatedTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
 			"description": "need to get milk and bread",
@@ -117,10 +118,10 @@ describe('ClientStore', () => {
 		expect(updatedTodo.lastUpdatedDate).not.toEqual(newTodo.lastUpdatedDate);
 		expect(updatedTodo.createdDate).toEqual(newTodo.createdDate);
 		expect(updatedTodo.id).toEqual(newTodo.id);
-		
+
 		// delete
 		await todoStore.removeItem(updatedTodo.id);
-		
+
 		await expect(todoStore.getItem(updatedTodo.id)).resolves.toBeNull()
 	});
 	

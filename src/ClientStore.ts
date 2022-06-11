@@ -9,15 +9,12 @@ const defaultConfig = {
 	appName: "App",
 }
 
-export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | null) => void;
-export type StoreUnSubscriber = () => void;
-
 export class ClientStore<T extends Schema.DefaultValue> {
 	#store: LocalForage;
 	#config: ClientStore.Config;
 	#storeName: string;
 	#schema: Schema<T>;
-	#subscribers: StoreSubscriber[] = [];
+	#subscribers: ClientStore.StoreSubscriber[] = [];
 	#ready = false;
 	#size = 0;
 	
@@ -70,7 +67,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		this.#subscribers.forEach(sub => sub(eventType, id))
 	}
 	
-	subscribe(sub: StoreSubscriber): StoreUnSubscriber {
+	subscribe(sub: ClientStore.StoreSubscriber): ClientStore.StoreUnSubscriber {
 		if (typeof sub === 'function') {
 			this.#subscribers.push(sub)
 		}
@@ -134,15 +131,12 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		return updatedItem;
 	}
 	
-	async getItems(): Promise<Array<T | null>> {
-		const keys = await this.#store.keys();
-		return Promise.all(
-			keys.map(key => this.#store.getItem<T>(key))
-		)
+	async getItems(): Promise<Array<T>> {
+		return this.findAllItems(() => true);
 	}
 	
 	getItem(id: T['id']): Promise<T | null> {
-		return this.#store.getItem<T>(`${id}`);
+		return this.#store.getItem(`${id}`);
 	}
 	
 	removeItem(id: T['id']) {
@@ -182,6 +176,10 @@ export class ClientStore<T extends Schema.DefaultValue> {
 }
 
 export namespace ClientStore {
+	export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | null) => void;
+	
+	export type StoreUnSubscriber = () => void;
+	
 	export interface Config {
 		appName?: string;
 		version?: LocalForageOptions['version'];
