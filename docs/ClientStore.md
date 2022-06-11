@@ -190,6 +190,7 @@ await todoStore.clear();
 | size       | How big is the store in bytes                                                                                         | yes - readonly |
 | createItem | Creates an item given a partial or entire representation of the schema with values                                    | no - async     |
 | updateItem | Updates an item given a partial or entire representation of the schema with values                                    | no - async     |
+| loadItems  | Given a list of items data, it creates or updates the store based on the item existing or not                         | no - async     |
 | getItems   | Returns a list of items                                                                                               | no - async     |
 | getItem    | Return an item given the item id                                                                                      | no - async     |
 | removeItem | Remove an item given the item id                                                                                      | no - async     |
