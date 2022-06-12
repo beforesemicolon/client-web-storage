@@ -203,7 +203,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 			
 			if (shouldChange === true) {
 				await this.#store.setItem(`${item.id}`, updatedItem);
-				this.#broadcast(ClientStore.EventType.UPDATED, id);
+				this.#broadcast(ClientStore.EventType.UPDATED, updatedItem);
 				return updatedItem;
 			} else {
 				this.#broadcast(ClientStore.EventType.ABORTED, {
