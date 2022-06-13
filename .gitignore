@@ -9,8 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist/*
-!dist/client-store.min.js
-!dist/client-store.min.js.map
+!dist/client-web-storage.min.js
+!dist/client-web-storage.min.js.map
 *.local
 *.tgz
 

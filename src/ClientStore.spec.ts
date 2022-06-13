@@ -1,7 +1,7 @@
 import {ClientStore} from "./ClientStore";
 import {Schema, SchemaValue} from "./Schema";
 import {MEMORY_STORAGE} from "./MemoryStore";
-import StoreUnSubscriber = ClientStore.StoreUnSubscriber;
+import UnSubscriber = ClientStore.UnSubscriber;
 
 describe('ClientStore', () => {
 	interface User extends Schema.DefaultValue {
@@ -29,17 +29,26 @@ describe('ClientStore', () => {
 		state: new SchemaValue(String),
 	});
 	
-	const onChange = jest.fn();
+	let onChange = jest.fn();
+	let beforeChange = jest.fn(() => true);
 	let todoStore: ClientStore<ToDo>;
-	let unsub: StoreUnSubscriber;
+	let unsubChange: UnSubscriber;
+	let unsubBeforeChange: UnSubscriber;
 	
-	beforeAll(async () => {
+	beforeEach(async () => {
+		onChange = jest.fn();
+		beforeChange = jest.fn(() => true);
+		
 		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"});
-		unsub = todoStore.subscribe(onChange);
+		await todoStore.clear();
+		
+		unsubChange = todoStore.subscribe(onChange);
+		unsubBeforeChange = todoStore.beforeChange(beforeChange);
 	})
 	
-	afterAll(() => {
-		unsub();
+	afterEach(() => {
+		unsubChange();
+		unsubBeforeChange();
 	})
 	
 	it('should create store', () => {
@@ -47,10 +56,41 @@ describe('ClientStore', () => {
 		expect(todoStore.type).toBe(MEMORY_STORAGE);
 		expect(todoStore.name).toBe('Test-todo');
 		expect(todoStore.ready).toBe(true);
-		expect(onChange).toHaveBeenCalledWith("ready", null)
+		expect(todoStore.size).toBe(0);
+	});
+	
+	it('should intercept and prevent changes', async () => {
+		onChange.mockClear();
+		beforeChange.mockReturnValue(false);
+		
+		const newTodo = await todoStore.createItem({
+			name: "Buy groceries",
+			user: {
+				name: "John Doe",
+				avatar: ""
+			}
+		});
+		
+		expect(beforeChange).toHaveBeenCalledWith(ClientStore.EventType.CREATED, expect.objectContaining({
+			name: "Buy groceries"
+		}));
+		
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, expect.objectContaining({
+			action: ClientStore.EventType.CREATED,
+			data: {
+				name: "Buy groceries",
+				user: {
+					name: "John Doe",
+					avatar: ""
+				}
+			}
+		}));
+		expect(newTodo).toBe(null)
+		expect(todoStore.size).toBe(0)
 	});
 	
 	it('should load items', async () => {
+		onChange.mockClear();
 		const user = {
 			...userSchema.toValue(),
 			name: "John Doe"
@@ -78,7 +118,7 @@ describe('ClientStore', () => {
 			...items,
 			{...items[0], description: "Buy milk and bread"}
 		]);
-		
+
 		items = await todoStore.getItems();
 
 		expect(items).toHaveLength(2)
@@ -111,7 +151,7 @@ describe('ClientStore', () => {
 			user: {
 				name: "John Doe"
 			}
-		} as any)
+		} as any) as ToDo
 		
 		expect(newTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
@@ -125,7 +165,7 @@ describe('ClientStore', () => {
 				"name": "John Doe",
 			}
 		}))
-		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.CREATE, newTodo.id)
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.CREATED, newTodo)
 		
 		// read
 		await expect(todoStore.getItem(newTodo.id as any)).resolves.toEqual(newTodo)
@@ -141,7 +181,7 @@ describe('ClientStore', () => {
 		const updatedTodo = await todoStore.updateItem(newTodo.id, {
 			description: "need to get milk and bread",
 			id: 328947239487
-		})
+		}) as ToDo;
 
 		expect(updatedTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
@@ -155,7 +195,7 @@ describe('ClientStore', () => {
 				"name": "John Doe"
 			}
 		}))
-		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.UPDATE, newTodo.id);
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.UPDATED, newTodo.id);
 		expect(updatedTodo.lastUpdatedDate).not.toEqual(newTodo.lastUpdatedDate);
 		expect(updatedTodo.createdDate).toEqual(newTodo.createdDate);
 		expect(updatedTodo.id).toEqual(newTodo.id);
@@ -167,11 +207,15 @@ describe('ClientStore', () => {
 	});
 	
 	it('should create, search, and clear store', async () => {
+		onChange.mockClear(); // skip the ready event
 		const user = userSchema.toValue();
 		
-		const todo1 = await todoStore.createItem({name: "Buy groceries", user});
-		const todo2 = await todoStore.createItem({name: "Go to the gym", user});
-		const todo3 = await todoStore.createItem({name: "Pick kids at school", user});
+		const todo1 = await todoStore.createItem({name: "Buy groceries", user}) as ToDo;
+		const todo2 = await todoStore.createItem({name: "Go to the gym", user}) as ToDo;
+		const todo3 = await todoStore.createItem({name: "Pick kids at school", user}) as ToDo;
+		
+		expect(onChange).toHaveBeenCalledTimes(3);
+		onChange.mockClear();
 		
 		expect(todoStore.size).toBe(3);
 		expect((new Set([todo1.id, todo2.id, todo3.id])).size).toBe(3);
@@ -199,6 +243,10 @@ describe('ClientStore', () => {
 		})).toHaveLength(0);
 		
 		await todoStore.clear();
+		
+		expect(onChange).toHaveBeenCalledWith(
+			ClientStore.EventType.CLEARED, expect.arrayContaining([expect.any(Number), expect.any(Number), expect.any(Number)])
+		)
 		
 		expect(todoStore.size).toBe(0);
 		

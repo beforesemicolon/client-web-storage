@@ -35,7 +35,7 @@ The library is very small but super powerful. There are only few things to inter
 
 ```ts
 // Define schema TS type
-import {ClientStore, Schema} from "./ClientStore";
+import {ClientStore, Schema} from "client-web-storage";
 
 interface ToDo extends Schema.DefaultValue {
     name: string;

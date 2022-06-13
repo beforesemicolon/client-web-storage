@@ -41,26 +41,99 @@ const todoStore = new ClientStore<ToDo>("todos", todoSchema, {
 ```
 
 ## Subscribing to the Store
-You may also subscribe to the store for following events:
-- **ready**: when store has been initialized;
-- **created**: when item has been added to the store;
-- **deleted**: when item has been deleted from the store;
-- **updated**: when item has been updated to the store;
-- **cleared**: when store has been cleared;
-
-The `subscribe` method will call the provided callback with the `event` and single or list of `id` of the todos affected by the action
-when the event is other than `ready`.
+You may always know what is going on with your store by subscribing to it.
 
 ```ts
+import {ClientStore} from "client-web-storage";
+
 const todoStore = new ClientStore<ToDo>("todos", todoSchema);
 
-const unsub = todoStore.subscribe((event: ClientStore.EventType, todoId) => {
-  // handle even here
+const unsub = todoStore.subscribe((eventType, details) => {
+    switch (eventType) {
+      case ClientStore.EventType.READY: 
+        // handle event type here
+        break;
+      case ClientStore.EventType.CREATED: 
+        // handle event type here
+        break;
+      case ClientStore.EventType.UPDATED: 
+        // handle event type here
+        break;
+      case ClientStore.EventType.ABORTED: 
+        // handle event type here
+        break;
+      case ClientStore.EventType.CLEARED: 
+        // handle event type here
+        break;
+      case ClientStore.EventType.DELETED: 
+        // handle event type here
+        break;
+      case ClientStore.EventType.ERROR: 
+        // handle event type here
+        break;
+      default:
+    }
 })
 
 unsub() // call to unsubscribe from the store
 
 ```
+The `subscribe` callback will always be called with the event type and details which varies by the event type.
+
+| Event Name | Description                                                                    | Details                 |
+|------------|--------------------------------------------------------------------------------|-------------------------|
+| ready      | when store has been initialized                                                | `true`                  |
+| error      | when it fails to perform the action against the store                          | `{error, action, data}` |
+| created    | when item has been added to the store                                          | the new item            |
+| updated    | when item has been updated to the store                                        | the updated item        |
+| deleted    | when item has been deleted from the store                                      | item id                 |
+| cleared    | when store has been cleared                                                    | list of all items ids   |
+| aborted    | when action was prevented by returning `FALSE` from the `beforeChange` handler | `{action, data}`        |
+
+## Intercept changes before it happens
+In case you want to synchronize your data with server, you may want to intercept change action, make the API call and only
+then update the local storage to make sure you don't have to do any cleanups after if the API call ends up failing.
+
+For that you can set the `beforeChange` handler on the store to intercept actions, do what you have to do and return
+a `Boolean` whether to go ahead and update the client storage.
+
+```ts
+import {ClientStore} from "client-web-storage";
+import {todoService} from "./todo.service"; // handles API communication
+
+const todoStore = new ClientStore<ToDo>("todos", todoSchema);
+
+const unsub = todoStore.beforeChange(async (eventType, data) => {
+    switch (eventType) {
+        case ClientStore.EventType.CREATED:
+            await todoService.createTodo(data);
+            break;
+        case ClientStore.EventType.UPDATED:
+            await todoService.updateTodo(data.id, data);
+            break;
+        case ClientStore.EventType.DELETED:
+            await todoService.updateTodo(data);
+            break;
+        case ClientStore.EventType.CLEARED:
+            await todoService.deleteAllByIds(data);
+            break;
+        default:
+    };
+    
+    return true; // required to flag the store that the action should continue
+});
+
+unsub() // call to unsubscribe from the before changes handling
+```
+
+Any error that is thrown inside the `beforeChange` callback handler will be caught and a `ERROR` event is thrown
+which if you are subscribed to the store, you can respond to.
+
+The `beforeChange` handler is called only for events which are meant to change the state of the store:
+- `created`;
+- `updated`;
+- `deleted`;
+- `cleared`;
 
 ## CRUD Store
 The store does a lot of the heavy lifting and handles pretty much everything for you while providing a simple `CRUD`
@@ -190,6 +263,7 @@ await todoStore.clear();
 | size       | How big is the store in bytes                                                                                         | yes - readonly |
 | createItem | Creates an item given a partial or entire representation of the schema with values                                    | no - async     |
 | updateItem | Updates an item given a partial or entire representation of the schema with values                                    | no - async     |
+| loadItems  | Given a list of items data, it creates or updates the store based on the item existing or not                         | no - async     |
 | getItems   | Returns a list of items                                                                                               | no - async     |
 | getItem    | Return an item given the item id                                                                                      | no - async     |
 | removeItem | Remove an item given the item id                                                                                      | no - async     |
