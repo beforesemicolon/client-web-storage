@@ -1,8 +1,14 @@
 import {isNil} from "./utils/is-nil";
-import {uniqueId} from "./utils/unique-id";
+import {generateUUID} from "./utils/generate-uuid";
 
 export class SchemaId {
-	value = uniqueId();
+	value = (() => {
+		try {
+			return crypto.randomUUID();
+		} catch (e) {
+			return generateUUID();
+		}
+	})();
 }
 
 const getDefaultValue = (type: Schema.Type) => {
@@ -43,7 +49,7 @@ const isSameValueType = (type: Schema.Type, value: any) => {
 export class SchemaValue {
 	constructor(public type: Schema.Type | Schema<any>, public required = false, public defaultValue: Schema.ValueType = null) {
 		if (defaultValue !== null && !isSameValueType(type, defaultValue)) {
-			throw new Error(`Default value "${defaultValue}" does not match type "${type.name}"`);
+			throw new Error(`Default value "${defaultValue.toString()}" does not match type "${type.name}"`);
 		}
 		
 		this.defaultValue = defaultValue ?? getDefaultValue(this.type);
@@ -74,7 +80,7 @@ export class Schema<T extends Schema.DefaultValue> {
 	
 	constructor(name: string, obj: Schema.Map | null = null, includeDefaultKeys = true) {
 		this.#name = name;
-		this.#includeDefaultKeys  = includeDefaultKeys;
+		this.#includeDefaultKeys = includeDefaultKeys;
 		
 		if (!includeDefaultKeys) {
 			this.#obj = {};
@@ -144,7 +150,7 @@ export class Schema<T extends Schema.DefaultValue> {
 						return field.type.hasField(others.join('.'))
 					}
 				} else {
-					return  this.#obj.hasOwnProperty(first);
+					return this.#obj.hasOwnProperty(first);
 				}
 			}
 		}
@@ -256,8 +262,11 @@ export class Schema<T extends Schema.DefaultValue> {
 					case val.type instanceof Schema:
 						obj[mapKey] = (val.type as Schema<any>).toValue();
 						break;
-					case val.type instanceof Date:
-						obj[mapKey] = val.defaultValue ?? new Date();
+					case val.type === SchemaId:
+						obj[mapKey] = (new SchemaId()).value;
+						break;
+					case val.type === Date:
+						obj[mapKey] = val.defaultValue instanceof Date ? val.defaultValue : nowDate;
 						break;
 					default:
 						obj[mapKey] = val.defaultValue;
@@ -360,7 +369,7 @@ export namespace Schema {
 	}
 	
 	export interface DefaultValue {
-		id?: number;
+		id?: string;
 		createdDate?: Date;
 		lastUpdatedDate?: Date;
 	}

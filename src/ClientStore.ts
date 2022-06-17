@@ -136,7 +136,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 */
 	async createItem(value: Partial<T>): Promise<T | null> {
 		const invalidFields = this.#schema.getInvalidSchemaDataFields(value);
-		
+
 		if (!invalidFields.length) {
 			const newItem = this.#schema.toValue();
 			
@@ -162,11 +162,11 @@ export class ClientStore<T extends Schema.DefaultValue> {
 					});
 				}
 			} catch (error) {
-				console.error(`Failed to create item "${value}"`, error);
+				console.error(`Failed to create item "${JSON.stringify(value, null, 2)}"`, error);
 				this.#broadcast(ClientStore.EventType.ERROR, {
 					action: ClientStore.EventType.CREATED,
 					error,
-					data: newItem
+					data: value
 				});
 			}
 			
@@ -208,15 +208,15 @@ export class ClientStore<T extends Schema.DefaultValue> {
 			} else {
 				this.#broadcast(ClientStore.EventType.ABORTED, {
 					action: ClientStore.EventType.UPDATED,
-					data: updatedItem
+					data
 				});
 			}
 		} catch (error) {
-			console.error(`Failed to update item "${item}"`, error);
+			console.error(`Failed to update item with id "${id}"`, error);
 			this.#broadcast(ClientStore.EventType.ERROR, {
 				action: ClientStore.EventType.UPDATED,
 				error,
-				data: updatedItem
+				data
 			});
 		}
 		
@@ -273,8 +273,8 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	/**
 	 * clear the store from all its items
 	 */
-	async clear(): Promise<number[] | null> {
-		const keys: number[] = (await this.#store.keys()).map(Number);
+	async clear(): Promise<string[] | null> {
+		const keys: string[] = (await this.#store.keys());
 		
 		try {
 			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.CLEARED, keys);

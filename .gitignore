@@ -26,4 +26,5 @@ dist/*
 *.sw?
 
 # test
-coverage
+coverage/*
+!coverage/coverage-final.json

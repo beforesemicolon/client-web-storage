@@ -2,6 +2,7 @@ import {ClientStore} from "./ClientStore";
 import {Schema, SchemaValue} from "./Schema";
 import {MEMORY_STORAGE} from "./MemoryStore";
 import UnSubscriber = ClientStore.UnSubscriber;
+import objectContaining = jasmine.objectContaining;
 
 describe('ClientStore', () => {
 	interface User extends Schema.DefaultValue {
@@ -51,6 +52,190 @@ describe('ClientStore', () => {
 		unsubBeforeChange();
 	})
 	
+	it('should throw error is provided schema is invalid', () => {
+		// @ts-ignore
+		expect(() => new ClientStore("sample", {})).toThrowError('Missing or unknown "Schema"')
+		expect(() => new ClientStore("sample", {
+			// @ts-ignore
+			sample: Symbol('invalid')
+		})).toThrowError('Missing or unknown "Schema"')
+	});
+	
+	describe('should abort when', () => {
+		const data = {
+			name: "Buy groceries",
+			user: {
+				name: "John Doe",
+				avatar: ""
+			}
+		};
+		
+		beforeEach(async () => {
+			await todoStore.clear()
+		})
+		
+		afterEach(() => {
+			beforeChange.mockRestore();
+		})
+		
+		it('create item', async () => {
+			onChange.mockClear();
+			beforeChange.mockReturnValue(false);
+			
+			const newTodo = await todoStore.createItem(data);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, expect.objectContaining({
+				action: ClientStore.EventType.CREATED,
+				data
+			}));
+			expect(newTodo).toBe(null)
+			expect(todoStore.size).toBe(0);
+			
+			beforeChange.mockRestore();
+		});
+		
+		it('update item', async () => {
+			const newTodo = await todoStore.createItem(data);
+			
+			onChange.mockClear();
+			
+			beforeChange.mockReturnValue(false);
+			
+			const res = await todoStore.updateItem(newTodo?.id, {
+				name: "buy shoes"
+			});
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, {
+				action: ClientStore.EventType.UPDATED,
+				data: {
+					name: "buy shoes"
+				}
+			});
+			expect(res).toBe(null)
+		});
+		
+		it('remove item', async () => {
+			const newTodo = await todoStore.createItem(data);
+			
+			onChange.mockClear();
+			
+			beforeChange.mockReturnValue(false);
+			
+			const res = await todoStore.removeItem(newTodo?.id);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, {
+				action: ClientStore.EventType.DELETED,
+				data: newTodo?.id
+			});
+			expect(res).toBe(null)
+		});
+		
+		it('clear items', async () => {
+			const newTodo = await todoStore.createItem(data);
+			
+			onChange.mockClear();
+			
+			beforeChange.mockReturnValue(false);
+			
+			const res = await todoStore.clear();
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, {
+				action: ClientStore.EventType.CLEARED,
+				data: [newTodo?.id]
+			});
+			expect(res).toBe(null)
+		});
+	});
+	
+	describe('should broadcast error if', () => {
+		const data = {
+			name: "Buy groceries",
+			user: {
+				name: "John Doe",
+				avatar: ""
+			}
+		};
+		const error = new Error('random');
+		const createTodo = () => todoStore.createItem(data);
+		const setupBeforeChangeFn = () => todoStore.beforeChange(() => {
+			throw error
+		});
+		
+		beforeEach(async () => {
+			await todoStore.clear()
+		})
+		
+		it('createItem fails', async () => {
+			onChange.mockClear();
+			
+			const unsub = setupBeforeChangeFn();
+			
+			await createTodo();
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.CREATED,
+				data: expect.objectContaining(data),
+				error
+			}));
+			
+			unsub();
+		});
+		
+		it('updateItem fails', async () => {
+			const todo = await createTodo();
+			
+			onChange.mockClear();
+			
+			const unsub = setupBeforeChangeFn();
+			
+			await todoStore.updateItem(todo?.id, data);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.UPDATED,
+				data: expect.objectContaining(data),
+				error
+			}));
+
+			unsub();
+		});
+		
+		it('removeItem fails', async () => {
+			const todo = await createTodo();
+			
+			onChange.mockClear();
+			
+			const unsub = setupBeforeChangeFn();
+			
+			await todoStore.removeItem(todo?.id);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.DELETED,
+				data: todo?.id,
+				error
+			}));
+			
+			unsub();
+		});
+		
+		it('clear fails', async () => {
+			const todo = await createTodo();
+			
+			onChange.mockClear();
+			
+			const unsub = setupBeforeChangeFn();
+			
+			await todoStore.clear();
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.CLEARED,
+				data: [todo?.id],
+				error
+			}));
+			
+			unsub();
+		});
+	});
+	
 	it('should create store', () => {
 		expect(todoStore).toBeDefined();
 		expect(todoStore.type).toBe(MEMORY_STORAGE);
@@ -59,42 +244,18 @@ describe('ClientStore', () => {
 		expect(todoStore.size).toBe(0);
 	});
 	
-	it('should intercept and prevent changes', async () => {
-		onChange.mockClear();
-		beforeChange.mockReturnValue(false);
-		
-		const newTodo = await todoStore.createItem({
-			name: "Buy groceries",
-			user: {
-				name: "John Doe",
-				avatar: ""
-			}
-		});
-		
-		expect(beforeChange).toHaveBeenCalledWith(ClientStore.EventType.CREATED, expect.objectContaining({
-			name: "Buy groceries"
-		}));
-		
-		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, expect.objectContaining({
-			action: ClientStore.EventType.CREATED,
-			data: {
-				name: "Buy groceries",
-				user: {
-					name: "John Doe",
-					avatar: ""
-				}
-			}
-		}));
-		expect(newTodo).toBe(null)
-		expect(todoStore.size).toBe(0)
-	});
-	
 	it('should load items', async () => {
 		onChange.mockClear();
 		const user = {
 			...userSchema.toValue(),
 			name: "John Doe"
 		}
+		
+		await expect(todoStore.loadItems()).resolves.toEqual(null);
+		await expect(todoStore.loadItems([])).resolves.toEqual(null);
+		
+		expect(todoStore.size).toBe(0);
+		
 		await todoStore.loadItems([
 			{name: "Go Shopping", user},
 			{name: "Go To Gym", user}
@@ -156,7 +317,7 @@ describe('ClientStore', () => {
 		expect(newTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
 			"description": "",
-			"id": expect.any(Number),
+			"id": expect.any(String),
 			"lastUpdatedDate": expect.any(Date),
 			"name": "Buy groceries",
 			"selected": false,
@@ -166,7 +327,7 @@ describe('ClientStore', () => {
 			}
 		}))
 		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.CREATED, newTodo)
-		
+		onChange.mockClear()
 		// read
 		await expect(todoStore.getItem(newTodo.id as any)).resolves.toEqual(newTodo)
 		await expect(todoStore.getItems()).resolves.toEqual([newTodo])
@@ -180,13 +341,13 @@ describe('ClientStore', () => {
 
 		const updatedTodo = await todoStore.updateItem(newTodo.id, {
 			description: "need to get milk and bread",
-			id: 328947239487
+			id: '328947239487'
 		}) as ToDo;
 
 		expect(updatedTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
 			"description": "need to get milk and bread",
-			"id": expect.any(Number),
+			"id": expect.any(String),
 			"lastUpdatedDate": expect.any(Date),
 			"name": "Buy groceries",
 			"selected": false,
@@ -195,11 +356,14 @@ describe('ClientStore', () => {
 				"name": "John Doe"
 			}
 		}))
-		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.UPDATED, newTodo.id);
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.UPDATED, expect.objectContaining({
+			description: "need to get milk and bread",
+			id: updatedTodo.id
+		}));
 		expect(updatedTodo.lastUpdatedDate).not.toEqual(newTodo.lastUpdatedDate);
 		expect(updatedTodo.createdDate).toEqual(newTodo.createdDate);
 		expect(updatedTodo.id).toEqual(newTodo.id);
-
+		onChange.mockClear()
 		// delete
 		await todoStore.removeItem(updatedTodo.id);
 
@@ -245,7 +409,7 @@ describe('ClientStore', () => {
 		await todoStore.clear();
 		
 		expect(onChange).toHaveBeenCalledWith(
-			ClientStore.EventType.CLEARED, expect.arrayContaining([expect.any(Number), expect.any(Number), expect.any(Number)])
+			ClientStore.EventType.CLEARED, expect.arrayContaining([expect.any(String), expect.any(String), expect.any(String)])
 		)
 		
 		expect(todoStore.size).toBe(0);
