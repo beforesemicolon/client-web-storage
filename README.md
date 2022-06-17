@@ -1,6 +1,8 @@
 # Client Web Storage
 Browser storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with basic Schema and data validation.
 
+[![npm](https://img.shields.io/npm/v/client-web-storage)](https://www.npmjs.com/package/client-web-storage)
+
 ## Installation
 
 ### In Node Projects:
