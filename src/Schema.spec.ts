@@ -32,6 +32,13 @@ describe('SchemaValue', () => {
 })
 
 describe('Schema', () => {
+	it('should fail if obj is invalid', () => {
+		expect(() => new Schema('sample', {
+			// @ts-ignore
+			val: Symbol('invalid')
+		})).toThrowError('Field "val" is not a SchemaValue')
+	});
+	
 	describe('should handle simple types', () => {
 		interface ToDo extends Schema.DefaultValue {
 			name: string;
@@ -52,6 +59,10 @@ describe('Schema', () => {
 			todoSchema.defineField("selected", Boolean);
 			todoSchema.defineField("state", String);
 		})
+		
+		it('should get the name', () => {
+			expect(todoSchema.name).toBe('todo')
+		});
 		
 		it('should return correct JSON value', () => {
 			expect(todoSchema.toJSON()).toEqual(expect.objectContaining({
@@ -102,12 +113,12 @@ describe('Schema', () => {
 			expect(todoSchema.toValue()).toEqual(expect.objectContaining({
 				"createdDate": expect.any(Date),
 				"description": "",
-				"id": expect.any(Number),
+				"id": expect.any(String),
 				"lastUpdatedDate": expect.any(Date),
 				"name": "",
 				"selected": false,
 				"state": "",
-				"userId": null
+				"userId": expect.any(String)
 			}))
 		});
 		
@@ -119,8 +130,11 @@ describe('Schema', () => {
 		
 		it('should check field', () => {
 			expect(todoSchema.hasField("description")).toBeTruthy()
+			expect(todoSchema.getField("description")).toEqual( new SchemaValue(String))
 			// @ts-ignore
 			expect(todoSchema.hasField("deletedDae")).toBeFalsy()
+			expect(todoSchema.getField("deletedDae")).toBe(null)
+			expect(todoSchema.getField("")).toBe(null)
 		});
 		
 		it('should update field', () => {
@@ -258,6 +272,53 @@ describe('Schema', () => {
 			})).toEqual([])
 		});
 		
+		it('ArrayBuffer', () => {
+			interface DT extends Schema.DefaultValue {
+				data: ArrayBuffer;
+			}
+			
+			const arraySchema = new Schema<DT>("arrayBuffer", {
+				data: new SchemaValue(ArrayBuffer)
+			})
+			
+			expect(arraySchema.toJSON()).toEqual(expect.objectContaining({
+				"createdDate": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				},
+				"data": {
+					"defaultValue": new ArrayBuffer(0),
+					"required": false,
+					"type": "ArrayBuffer"
+				},
+				"id": {
+					"defaultValue": null,
+					"required": false,
+					"type": "SchemaId"
+				},
+				"lastUpdatedDate": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				}
+			}))
+			expect(arraySchema.isValidFieldValue("data", new ArrayBuffer(10))).toBeTruthy()
+			expect(arraySchema.isValidFieldValue("data", [12, {}, "sample"])).toBeFalsy()
+			expect(arraySchema.isValidFieldValue("data", true)).toBeFalsy()
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: 12,
+				new: "yes"
+			})).toEqual(["data", "new"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [12, true, {}],
+				obj: "yes"
+			})).toEqual(["data", "obj"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: new ArrayBuffer(0),
+			})).toEqual([])
+		});
+		
 		it('Int32Array', () => {
 			interface DT extends Schema.DefaultValue {
 				data: Int32Array;
@@ -306,6 +367,52 @@ describe('Schema', () => {
 			})).toEqual([])
 		});
 	})
+	
+	describe('should handle no default values schema', () => {
+		interface ParkingTicket extends Schema.DefaultValue {
+			ticketId: SchemaId;
+			arrivalTime: Date;
+			departureTime: Date;
+		}
+		
+		let parkingTicketSchema: Schema<ParkingTicket>;
+		
+		beforeEach(() => {
+			parkingTicketSchema = new Schema("parkingTicket", null, false);
+			
+			parkingTicketSchema.defineField("ticketId", SchemaId, {required: true});
+			parkingTicketSchema.defineField("arrivalTime", Date);
+			parkingTicketSchema.defineField("departureTime", Date, {defaultValue: undefined});
+		})
+		
+		it('should return correct JSON value', () => {
+			expect(parkingTicketSchema.toJSON()).toEqual({
+				"arrivalTime": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				},
+				"departureTime": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				},
+				"ticketId": {
+					"defaultValue": null,
+					"required": true,
+					"type": "SchemaId"
+				}
+			});
+		});
+		
+		it('should return correct value', () => {
+			expect(parkingTicketSchema.toValue()).toEqual(expect.objectContaining({
+				"arrivalTime": expect.any(Date),
+				"departureTime": expect.any(Date),
+				"ticketId": expect.any(String)
+			}))
+		});
+	});
 	
 	it('should handle nested schemas', () => {
 		interface ToDo extends Schema.DefaultValue {
@@ -402,7 +509,7 @@ describe('Schema', () => {
 		expect(todoSchema.toValue()).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
 			"description": "",
-			"id": expect.any(Number),
+			"id": expect.any(String),
 			"lastUpdatedDate": expect.any(Date),
 			"name": "",
 			"selected": false,
@@ -410,7 +517,7 @@ describe('Schema', () => {
 			"user": {
 				"avatar": "",
 				"createdDate": expect.any(Date),
-				"id": expect.any(Number),
+				"id": expect.any(String),
 				"lastUpdatedDate": expect.any(Date),
 				"name": "",
 			}
