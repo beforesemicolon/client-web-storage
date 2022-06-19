@@ -139,7 +139,7 @@ The value of this `todo` schema when calling `toValue` would be, for example:
 ```js
 /*
 {
-  id: 3284732894792342,
+  id: "123e4567-e89b-12d3-a456-426614174000",
   name: "",
   description: "",
   complete: false,
