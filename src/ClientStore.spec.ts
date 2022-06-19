@@ -294,7 +294,7 @@ describe('ClientStore', () => {
 		
 		let items = await todoStore.getItems();
 		
-		expect(items).toHaveLength(2)
+		expect(todoStore.size).toBe(2)
 		expect(items).toEqual([
 			expect.objectContaining({
 				name: "Go Shopping",
@@ -318,8 +318,8 @@ describe('ClientStore', () => {
 		]);
 
 		items = await todoStore.getItems();
-
-		expect(items).toHaveLength(2)
+		
+		expect(todoStore.size).toBe(2)
 		expect(items).toEqual([
 			expect.objectContaining({
 				name: "Go Shopping",
