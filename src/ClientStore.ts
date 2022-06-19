@@ -114,17 +114,44 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 */
 	async loadItems(items: Partial<T>[] = []): Promise<Array<T | null> | null> {
 		if (items.length) {
-			const keys = new Set(await this.#store.keys());
-			
-			return Promise.all(
-				items.map(item => {
-					if (keys.has(`${item.id}`)) {
-						return  this.updateItem(item.id, item);
+			try {
+				const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.LOADED, items);
+				
+				if (shouldChange === true) {
+					const mappedItems = (await this.getItems()).reduce((acc, item) => ({...acc, [item.id as string]: item}), {} as {[k: string]: T});
+					const newItems = [];
+					
+					for (let item of items) {
+						let newItem = mappedItems[item.id as string] || this.#schema.toValue();
+						
+						for (const itemKey in item) {
+							if (item.hasOwnProperty(itemKey)) {
+								// @ts-ignore
+								newItem[itemKey] = item[itemKey];
+								
+								await this.#store.setItem(`${newItem.id}`, newItem);
+								
+								newItems.push(newItem);
+							}
+						}
 					}
 					
-					return this.createItem(item);
-				})
-			)
+					this.#broadcast(ClientStore.EventType.LOADED, newItems);
+					
+					return newItems;
+				} else {
+					this.#broadcast(ClientStore.EventType.ABORTED, {
+						action: ClientStore.EventType.LOADED,
+						data: items
+					});
+				}
+			} catch(error) {
+				this.#broadcast(ClientStore.EventType.ERROR, {
+					action: ClientStore.EventType.LOADED,
+					error,
+					data: items
+				});
+			}
 		}
 		
 		return null;
@@ -349,6 +376,7 @@ export namespace ClientStore {
 	export enum EventType {
 		READY = "ready",
 		CREATED = "created",
+		LOADED = "loaded",
 		ERROR = "error",
 		ABORTED = "aborted",
 		DELETED = "deleted",

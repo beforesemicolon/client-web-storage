@@ -80,15 +80,16 @@ unsub() // call to unsubscribe from the store
 ```
 The `subscribe` callback will always be called with the event type and details which varies by the event type.
 
-| Event Name | Description                                                                    | Details                 |
-|------------|--------------------------------------------------------------------------------|-------------------------|
-| ready      | when store has been initialized                                                | `true`                  |
-| error      | when it fails to perform the action against the store                          | `{error, action, data}` |
-| created    | when item has been added to the store                                          | the new item            |
-| updated    | when item has been updated to the store                                        | the updated item        |
-| deleted    | when item has been deleted from the store                                      | item id                 |
-| cleared    | when store has been cleared                                                    | list of all items ids   |
-| aborted    | when action was prevented by returning `FALSE` from the `beforeChange` handler | `{action, data}`        |
+| Event Name | Description                                                                    | Details                        |
+|------------|--------------------------------------------------------------------------------|--------------------------------|
+| ready      | when store has been initialized                                                | `true`                         |
+| error      | when it fails to perform the action against the store                          | `{error, action, data}`        |
+| created    | when item has been added to the store                                          | the new item                   |
+| updated    | when item has been updated to the store                                        | the updated item               |
+| loaded     | when a list of items are added or updated in the store                         | list of updated or added items |
+| deleted    | when item has been deleted from the store                                      | item id                        |
+| cleared    | when store has been cleared                                                    | list of all items ids          |
+| aborted    | when action was prevented by returning `FALSE` from the `beforeChange` handler | `{action, data}`               |
 
 ## Intercept changes before it happens
 In case you want to synchronize your data with server, you may want to intercept change action, make the API call and only
@@ -132,6 +133,7 @@ which if you are subscribed to the store, you can respond to.
 The `beforeChange` handler is called only for events which are meant to change the state of the store:
 - `created`;
 - `updated`;
+- `loaded`;
 - `deleted`;
 - `cleared`;
 

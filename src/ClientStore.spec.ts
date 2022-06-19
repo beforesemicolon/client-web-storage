@@ -114,6 +114,21 @@ describe('ClientStore', () => {
 			expect(res).toBe(null)
 		});
 		
+		it('load items', async () => {
+			onChange.mockClear();
+			beforeChange.mockReturnValue(false);
+			
+			await todoStore.loadItems([data]);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, expect.objectContaining({
+				action: ClientStore.EventType.LOADED,
+				data: [data]
+			}));
+			expect(todoStore.size).toBe(0);
+
+			beforeChange.mockRestore();
+		});
+		
 		it('remove item', async () => {
 			const newTodo = await todoStore.createItem(data);
 			
@@ -199,6 +214,22 @@ describe('ClientStore', () => {
 			unsub();
 		});
 		
+		it('loadItems fails', async () => {
+			onChange.mockClear();
+			
+			const unsub = setupBeforeChangeFn();
+			
+			await todoStore.loadItems([data])
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.LOADED,
+				data: expect.arrayContaining([data]),
+				error
+			}));
+			
+			unsub();
+		});
+		
 		it('removeItem fails', async () => {
 			const todo = await createTodo();
 			
@@ -274,9 +305,15 @@ describe('ClientStore', () => {
 				description: "",
 			})
 		])
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.LOADED, expect.arrayContaining([
+			expect.objectContaining({name: "Go Shopping", user}),
+			expect.objectContaining({name: "Go To Gym", user}),
+		]));
+		
+		onChange.mockClear()
 		
 		await todoStore.loadItems([
-			...items,
 			{...items[0], description: "Buy milk and bread"}
 		]);
 
@@ -292,7 +329,11 @@ describe('ClientStore', () => {
 				name: "Go To Gym",
 				description: "",
 			})
-		])
+		]);
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.LOADED, expect.arrayContaining([
+			expect.objectContaining({name: "Go Shopping", description: "Buy milk and bread"}),
+		]));
 	});
 	
 	it('should CRUD item', async () => {
