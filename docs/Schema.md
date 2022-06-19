@@ -74,7 +74,7 @@ with default values.
 todoShema.toValue()
 /*
 {
-  id: 3284732894792342,
+  id: "123e4567-e89b-12d3-a456-426614174000",
   name: "",
   description: "",
   complete: false,
@@ -94,7 +94,7 @@ The Schema have the following default depending on the types:
 - ArrayBuffer => empty array buffer;
 - Date => date at call time;
 - Schema => resulting of calling `toValue` on the type;
-- SchemaId => random generated number;
+- SchemaId => UUID;
 - All else => null;
 
 Of-course you may also define your default values when defining each field.
