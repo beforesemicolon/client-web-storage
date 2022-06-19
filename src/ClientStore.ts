@@ -17,7 +17,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	#storeName: string;
 	#schema: Schema<T>;
 	#subscribers: ClientStore.StoreSubscriber[] = [];
-	#beforeChangeHandler: ClientStore.BeforeChangeHandler = () => true;
+	#beforeChangeHandler: ClientStore.BeforeChangeHandler<T> = () => true;
 	#ready = false;
 	#size = 0;
 	
@@ -98,7 +98,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 * to perform any action before it happens and gets broadcast as event
 	 * @param handler
 	 */
-	beforeChange(handler: ClientStore.BeforeChangeHandler): ClientStore.UnSubscriber {
+	beforeChange(handler: ClientStore.BeforeChangeHandler<T>): ClientStore.UnSubscriber {
 		if (typeof handler === 'function') {
 			this.#beforeChangeHandler = handler;
 		}
@@ -273,7 +273,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 */
 	async removeItem(id: T['id']): Promise<true | null> {
 		try {
-			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.DELETED, id as T['id']);
+			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.DELETED, id);
 			
 			if (shouldChange === true) {
 				await this.#store.removeItem(`${id}`);
@@ -302,8 +302,8 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	/**
 	 * clear the store from all its items
 	 */
-	async clear(): Promise<string[] | null> {
-		const keys: string[] = (await this.#store.keys());
+	async clear(): Promise<T['id'][] | null> {
+		const keys: T['id'][] = (await this.#store.keys());
 		
 		try {
 			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.CLEARED, keys);
@@ -362,11 +362,14 @@ export class ClientStore<T extends Schema.DefaultValue> {
 }
 
 export namespace ClientStore {
-	export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | number[] | null) => void;
+	
+	export type StoreSubscriber = (eventType: ClientStore.EventType, data?: any) => void;
 	
 	export type UnSubscriber = () => void;
 	
-	export type BeforeChangeHandler = (eventType: ClientStore.EventType, data: any) => Promise<boolean> | boolean;
+	type BeforeChangeHandlerData<T extends Schema.DefaultValue> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
+	
+	export type BeforeChangeHandler<T extends Schema.DefaultValue> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<boolean> | boolean;
 	
 	export interface Config {
 		appName?: string;
