@@ -119,7 +119,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 				
 				if (shouldChange === true) {
 					const mappedItems = (await this.getItems()).reduce((acc, item) => ({...acc, [item.id as string]: item}), {} as {[k: string]: T});
-					const newItems = [];
+					const newItems = new Map();
 					
 					for (let item of items) {
 						let newItem = mappedItems[item.id as string] || this.#schema.toValue();
@@ -131,15 +131,16 @@ export class ClientStore<T extends Schema.DefaultValue> {
 								
 								await this.#store.setItem(`${newItem.id}`, newItem);
 								
-								newItems.push(newItem);
+								newItems.set(newItem.id, newItem);
 							}
 						}
 					}
+					const itemValues = Array.from(newItems.values());
 					
 					this.#size = await this.#store.length();
-					this.#broadcast(ClientStore.EventType.LOADED, newItems);
-					
-					return newItems;
+					this.#broadcast(ClientStore.EventType.LOADED, itemValues);
+
+					return itemValues
 				} else {
 					this.#broadcast(ClientStore.EventType.ABORTED, {
 						action: ClientStore.EventType.LOADED,

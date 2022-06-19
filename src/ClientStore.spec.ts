@@ -40,7 +40,12 @@ describe('ClientStore', () => {
 		onChange = jest.fn();
 		beforeChange = jest.fn(() => true);
 		
-		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"});
+		todoStore = new ClientStore<ToDo>("todo", todoSchema, {
+			appName: "Test",
+			description: "test app",
+			type: ClientStore.Type.MEMORY_STORAGE,
+			version: 1
+		});
 		await todoStore.clear();
 		
 		unsubChange = todoStore.subscribe(onChange);
