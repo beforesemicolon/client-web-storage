@@ -49,7 +49,7 @@ interface ToDo extends Schema.DefaultValue {
 const todoShema = new Schema<ToDo>("todo");
 
 todoShema.defineField("name", String, {required: true});
-todoShema.defineField("description", String);
+todoShema.defineField("description", String, "No Description");
 todoShema.defineField("complete", Boolean);
 
 // create and use the store
@@ -63,7 +63,7 @@ todoStore.createItem({
 {
   id: "123e4567-e89b-12d3-a456-426614174000", // generated id
   name: "Go to Gym",
-  description: "",
+  description: "No Description",
   complete: false,
   createdDate: "January, 4th 2022",
   lastUpdatedDate: "January, 4th 2022",
