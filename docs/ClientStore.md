@@ -230,6 +230,8 @@ await todoStore.loadItems([
     {name: "Go To Gym", user}
 ]);
 ```
+It returns a list of created or updated items. The list will be empty if nothing was added either because something
+failed or action was aborted.
 
 ### Read Items
 To read items you can either do it for a single item or all of them.

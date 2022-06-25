@@ -112,30 +112,42 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 * update or create items in bulk
 	 * @param items
 	 */
-	async loadItems(items: Partial<T>[] = []): Promise<Array<T | null> | null> {
+	async loadItems(items: Array<{}> = []): Promise<Array<T>> {
 		if (items.length) {
 			try {
 				const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.LOADED, items);
 				
 				if (shouldChange === true) {
-					const mappedItems = (await this.getItems()).reduce((acc, item) => ({...acc, [item.id as string]: item}), {} as {[k: string]: T});
 					const newItems = new Map();
 					
 					for (let item of items) {
-						let newItem = mappedItems[item.id as string] || this.#schema.toValue();
+						let newItem = ((item as T).id ? (await this.getItem((item as T).id)) : this.#schema.toValue()) as Partial<T>;
 						
-						for (const itemKey in item) {
-							if (item.hasOwnProperty(itemKey)) {
+						for (const itemKey in newItem) {
+							if (newItem.hasOwnProperty(itemKey)) {
 								// @ts-ignore
-								newItem[itemKey] = item[itemKey];
+								const newValue = item[itemKey];
 								
-								await this.#store.setItem(`${newItem.id}`, newItem);
-								
-								newItems.set(newItem.id, newItem);
+								if (newValue) {
+									newItem[itemKey] = newValue;
+								}
 							}
 						}
+						
+						const invalidFields = this.#schema.getInvalidSchemaDataFields(newItem);
+						
+						if (!invalidFields.length) {
+							newItems.set(newItem.id, newItem);
+						} else {
+							throw new Error(`Missing or invalid field types: [${invalidFields.join(', ')}] in "${JSON.stringify(item, null, 2)}".`)
+						}
 					}
+					
 					const itemValues = Array.from(newItems.values());
+					
+					await Promise.all(
+						itemValues.map(newItem => this.#store.setItem(`${newItem.id}`, newItem))
+					);
 					
 					this.#size = await this.#store.length();
 					this.#broadcast(ClientStore.EventType.LOADED, itemValues);
@@ -156,7 +168,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 			}
 		}
 		
-		return null;
+		return [];
 	}
 	
 	/**

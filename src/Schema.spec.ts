@@ -537,7 +537,7 @@ describe('Schema', () => {
 			}
 		})).toEqual([])
 		expect(todoSchema.isValidFieldValue("user", {})).toBeFalsy();
-		expect(todoSchema.isValidFieldValue("user.name", "")).toBeTruthy();
+		expect(todoSchema.isValidFieldValue("user.name", "")).toBeFalsy();
 		expect(todoSchema.isValidFieldValue("user", {
 			name: 'sample'
 		})).toBeTruthy();

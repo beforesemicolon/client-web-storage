@@ -235,6 +235,26 @@ describe('ClientStore', () => {
 			unsub();
 		});
 		
+		it('loadItems fails for bad data type', async () => {
+			onChange.mockClear();
+			
+			await todoStore.loadItems([{
+				details: {
+					name: 12
+				}
+			}])
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.LOADED,
+				data: [{"details": {"name": 12}}],
+				error: new Error("Missing or invalid field types: [name, user.name] in \"{\n" +
+					"  \"details\": {\n" +
+					"    \"name\": 12\n" +
+					"  }\n" +
+					"}\".")
+			}));
+		});
+		
 		it('removeItem fails', async () => {
 			const todo = await createTodo();
 			
@@ -287,8 +307,8 @@ describe('ClientStore', () => {
 			name: "John Doe"
 		}
 		
-		await expect(todoStore.loadItems()).resolves.toEqual(null);
-		await expect(todoStore.loadItems([])).resolves.toEqual(null);
+		await expect(todoStore.loadItems()).resolves.toEqual([]);
+		await expect(todoStore.loadItems([])).resolves.toEqual([]);
 		
 		expect(todoStore.size).toBe(0);
 		
@@ -419,6 +439,7 @@ describe('ClientStore', () => {
 	it('should create, search, and clear store', async () => {
 		onChange.mockClear(); // skip the ready event
 		const user = userSchema.toValue();
+		user.name = "John Doe"
 		
 		const todo1 = await todoStore.createItem({name: "Buy groceries", user}) as ToDo;
 		const todo2 = await todoStore.createItem({name: "Go to the gym", user}) as ToDo;
