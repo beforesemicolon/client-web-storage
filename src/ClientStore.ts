@@ -121,8 +121,8 @@ export class ClientStore<T extends Schema.DefaultValue> {
 					const newItems = new Map();
 					
 					for (let item of items) {
-						let newItem = ((item as T).id ? (await this.getItem((item as T).id)) : this.#schema.toValue()) as Partial<T>;
-						
+						let newItem = (await this.getItem((item as T)?.id) ?? this.#schema.toValue()) as Partial<T>;
+
 						for (const itemKey in newItem) {
 							if (newItem.hasOwnProperty(itemKey)) {
 								// @ts-ignore

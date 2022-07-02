@@ -319,7 +319,7 @@ describe('ClientStore', () => {
 		
 		let items = await todoStore.getItems();
 		
-		expect(todoStore.size).toBe(2)
+		expect(todoStore.size).toBe(2);
 		expect(items).toEqual([
 			expect.objectContaining({
 				name: "Go Shopping",
@@ -335,15 +335,15 @@ describe('ClientStore', () => {
 			expect.objectContaining({name: "Go Shopping", user}),
 			expect.objectContaining({name: "Go To Gym", user}),
 		]));
-		
+
 		onChange.mockClear()
-		
+
 		await todoStore.loadItems([
 			{...items[0], description: "Buy milk and bread"}
 		]);
 
 		items = await todoStore.getItems();
-		
+
 		expect(todoStore.size).toBe(2)
 		expect(items).toEqual([
 			expect.objectContaining({
@@ -359,6 +359,17 @@ describe('ClientStore', () => {
 		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.LOADED, expect.arrayContaining([
 			expect.objectContaining({name: "Go Shopping", description: "Buy milk and bread"}),
 		]));
+		
+		await todoStore.clear();
+		
+		onChange.mockClear()
+		
+		expect(todoStore.size).toBe(0);
+		
+		const res = await todoStore.loadItems(items);
+		
+		expect(res).toEqual(items);
+		expect(onChange).toHaveBeenCalledTimes(1)
 	});
 	
 	it('should CRUD item', async () => {
