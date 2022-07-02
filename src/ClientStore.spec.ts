@@ -40,7 +40,12 @@ describe('ClientStore', () => {
 		onChange = jest.fn();
 		beforeChange = jest.fn(() => true);
 		
-		todoStore = new ClientStore<ToDo>("todo", todoSchema, {type: MEMORY_STORAGE, appName: "Test"});
+		todoStore = new ClientStore<ToDo>("todo", todoSchema, {
+			appName: "Test",
+			description: "test app",
+			type: ClientStore.Type.MEMORY_STORAGE,
+			version: 1
+		});
 		await todoStore.clear();
 		
 		unsubChange = todoStore.subscribe(onChange);
@@ -112,6 +117,21 @@ describe('ClientStore', () => {
 				}
 			});
 			expect(res).toBe(null)
+		});
+		
+		it('load items', async () => {
+			onChange.mockClear();
+			beforeChange.mockReturnValue(false);
+			
+			await todoStore.loadItems([data]);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ABORTED, expect.objectContaining({
+				action: ClientStore.EventType.LOADED,
+				data: [data]
+			}));
+			expect(todoStore.size).toBe(0);
+
+			beforeChange.mockRestore();
 		});
 		
 		it('remove item', async () => {
@@ -199,6 +219,42 @@ describe('ClientStore', () => {
 			unsub();
 		});
 		
+		it('loadItems fails', async () => {
+			onChange.mockClear();
+			
+			const unsub = setupBeforeChangeFn();
+			
+			await todoStore.loadItems([data])
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.LOADED,
+				data: expect.arrayContaining([data]),
+				error
+			}));
+			
+			unsub();
+		});
+		
+		it('loadItems fails for bad data type', async () => {
+			onChange.mockClear();
+			
+			await todoStore.loadItems([{
+				details: {
+					name: 12
+				}
+			}])
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
+				action: ClientStore.EventType.LOADED,
+				data: [{"details": {"name": 12}}],
+				error: new Error("Missing or invalid field types: [name, user.name] in \"{\n" +
+					"  \"details\": {\n" +
+					"    \"name\": 12\n" +
+					"  }\n" +
+					"}\".")
+			}));
+		});
+		
 		it('removeItem fails', async () => {
 			const todo = await createTodo();
 			
@@ -251,8 +307,8 @@ describe('ClientStore', () => {
 			name: "John Doe"
 		}
 		
-		await expect(todoStore.loadItems()).resolves.toEqual(null);
-		await expect(todoStore.loadItems([])).resolves.toEqual(null);
+		await expect(todoStore.loadItems()).resolves.toEqual([]);
+		await expect(todoStore.loadItems([])).resolves.toEqual([]);
 		
 		expect(todoStore.size).toBe(0);
 		
@@ -263,7 +319,7 @@ describe('ClientStore', () => {
 		
 		let items = await todoStore.getItems();
 		
-		expect(items).toHaveLength(2)
+		expect(todoStore.size).toBe(2);
 		expect(items).toEqual([
 			expect.objectContaining({
 				name: "Go Shopping",
@@ -274,15 +330,21 @@ describe('ClientStore', () => {
 				description: "",
 			})
 		])
-		
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.LOADED, expect.arrayContaining([
+			expect.objectContaining({name: "Go Shopping", user}),
+			expect.objectContaining({name: "Go To Gym", user}),
+		]));
+
+		onChange.mockClear()
+
 		await todoStore.loadItems([
-			...items,
 			{...items[0], description: "Buy milk and bread"}
 		]);
 
 		items = await todoStore.getItems();
 
-		expect(items).toHaveLength(2)
+		expect(todoStore.size).toBe(2)
 		expect(items).toEqual([
 			expect.objectContaining({
 				name: "Go Shopping",
@@ -292,7 +354,22 @@ describe('ClientStore', () => {
 				name: "Go To Gym",
 				description: "",
 			})
-		])
+		]);
+		expect(onChange).toHaveBeenCalledTimes(1)
+		expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.LOADED, expect.arrayContaining([
+			expect.objectContaining({name: "Go Shopping", description: "Buy milk and bread"}),
+		]));
+		
+		await todoStore.clear();
+		
+		onChange.mockClear()
+		
+		expect(todoStore.size).toBe(0);
+		
+		const res = await todoStore.loadItems(items);
+		
+		expect(res).toEqual(items);
+		expect(onChange).toHaveBeenCalledTimes(1)
 	});
 	
 	it('should CRUD item', async () => {
@@ -373,6 +450,7 @@ describe('ClientStore', () => {
 	it('should create, search, and clear store', async () => {
 		onChange.mockClear(); // skip the ready event
 		const user = userSchema.toValue();
+		user.name = "John Doe"
 		
 		const todo1 = await todoStore.createItem({name: "Buy groceries", user}) as ToDo;
 		const todo2 = await todoStore.createItem({name: "Go to the gym", user}) as ToDo;

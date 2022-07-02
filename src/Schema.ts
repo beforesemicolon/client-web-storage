@@ -1,5 +1,6 @@
 import {isNil} from "./utils/is-nil";
 import {generateUUID} from "./utils/generate-uuid";
+import {isEmptyString} from "./utils/is-empty-string";
 
 export class SchemaId {
 	value = (() => {
@@ -189,7 +190,7 @@ export class Schema<T extends Schema.DefaultValue> {
 			}
 			
 			return val.required
-				? !isNil(value) && isSameValueType(val.type, value)
+				? !isNil(value) && (val.type !== String || !isEmptyString(value)) && isSameValueType(val.type, value)
 				: value === null || value === val.defaultValue || isSameValueType(val.type, value);
 		}
 		

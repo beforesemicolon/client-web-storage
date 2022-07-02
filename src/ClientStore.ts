@@ -17,7 +17,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	#storeName: string;
 	#schema: Schema<T>;
 	#subscribers: ClientStore.StoreSubscriber[] = [];
-	#beforeChangeHandler: ClientStore.BeforeChangeHandler = () => true;
+	#beforeChangeHandler: ClientStore.BeforeChangeHandler<T> = () => true;
 	#ready = false;
 	#size = 0;
 	
@@ -98,7 +98,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 * to perform any action before it happens and gets broadcast as event
 	 * @param handler
 	 */
-	beforeChange(handler: ClientStore.BeforeChangeHandler): ClientStore.UnSubscriber {
+	beforeChange(handler: ClientStore.BeforeChangeHandler<T>): ClientStore.UnSubscriber {
 		if (typeof handler === 'function') {
 			this.#beforeChangeHandler = handler;
 		}
@@ -112,22 +112,63 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 * update or create items in bulk
 	 * @param items
 	 */
-	async loadItems(items: Partial<T>[] = []): Promise<Array<T | null> | null> {
+	async loadItems(items: Array<{}> = []): Promise<Array<T>> {
 		if (items.length) {
-			const keys = new Set(await this.#store.keys());
-			
-			return Promise.all(
-				items.map(item => {
-					if (keys.has(`${item.id}`)) {
-						return  this.updateItem(item.id, item);
+			try {
+				const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.LOADED, items);
+				
+				if (shouldChange === true) {
+					const newItems = new Map();
+					
+					for (let item of items) {
+						let newItem = (await this.getItem((item as T)?.id) ?? this.#schema.toValue()) as Partial<T>;
+
+						for (const itemKey in newItem) {
+							if (newItem.hasOwnProperty(itemKey)) {
+								// @ts-ignore
+								const newValue = item[itemKey];
+								
+								if (newValue) {
+									newItem[itemKey] = newValue;
+								}
+							}
+						}
+						
+						const invalidFields = this.#schema.getInvalidSchemaDataFields(newItem);
+						
+						if (!invalidFields.length) {
+							newItems.set(newItem.id, newItem);
+						} else {
+							throw new Error(`Missing or invalid field types: [${invalidFields.join(', ')}] in "${JSON.stringify(item, null, 2)}".`)
+						}
 					}
 					
-					return this.createItem(item);
-				})
-			)
+					const itemValues = Array.from(newItems.values());
+					
+					await Promise.all(
+						itemValues.map(newItem => this.#store.setItem(`${newItem.id}`, newItem))
+					);
+					
+					this.#size = await this.#store.length();
+					this.#broadcast(ClientStore.EventType.LOADED, itemValues);
+
+					return itemValues
+				} else {
+					this.#broadcast(ClientStore.EventType.ABORTED, {
+						action: ClientStore.EventType.LOADED,
+						data: items
+					});
+				}
+			} catch(error) {
+				this.#broadcast(ClientStore.EventType.ERROR, {
+					action: ClientStore.EventType.LOADED,
+					error,
+					data: items
+				});
+			}
 		}
 		
-		return null;
+		return [];
 	}
 	
 	/**
@@ -244,7 +285,7 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 */
 	async removeItem(id: T['id']): Promise<true | null> {
 		try {
-			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.DELETED, id as T['id']);
+			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.DELETED, id);
 			
 			if (shouldChange === true) {
 				await this.#store.removeItem(`${id}`);
@@ -273,8 +314,8 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	/**
 	 * clear the store from all its items
 	 */
-	async clear(): Promise<string[] | null> {
-		const keys: string[] = (await this.#store.keys());
+	async clear(): Promise<T['id'][] | null> {
+		const keys: T['id'][] = (await this.#store.keys());
 		
 		try {
 			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.CLEARED, keys);
@@ -333,11 +374,14 @@ export class ClientStore<T extends Schema.DefaultValue> {
 }
 
 export namespace ClientStore {
-	export type StoreSubscriber = (eventType: ClientStore.EventType, id?: number | number[] | null) => void;
+	
+	export type StoreSubscriber = (eventType: ClientStore.EventType, data?: any) => void;
 	
 	export type UnSubscriber = () => void;
 	
-	export type BeforeChangeHandler = (eventType: ClientStore.EventType, data: any) => Promise<boolean> | boolean;
+	type BeforeChangeHandlerData<T extends Schema.DefaultValue> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
+	
+	export type BeforeChangeHandler<T extends Schema.DefaultValue> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<boolean> | boolean;
 	
 	export interface Config {
 		appName?: string;
@@ -349,6 +393,7 @@ export namespace ClientStore {
 	export enum EventType {
 		READY = "ready",
 		CREATED = "created",
+		LOADED = "loaded",
 		ERROR = "error",
 		ABORTED = "aborted",
 		DELETED = "deleted",

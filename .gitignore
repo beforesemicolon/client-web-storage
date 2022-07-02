@@ -27,4 +27,3 @@ dist/*
 
 # test
 coverage/*
-!coverage/coverage-final.json
