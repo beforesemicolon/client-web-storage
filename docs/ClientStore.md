@@ -144,11 +144,11 @@ interface to interact and manage everything in the store.
 For the following `CRUD` examples we will take in consideration the following:
 ```ts
 // Schema TS type
-interface User extends Schema.DefaultValue {
+interface User extends SchemaDefaultValues {
     name: string;
 }
 
-interface ToDo extends Schema.DefaultValue {
+interface ToDo extends SchemaDefaultValues {
     name: string;
     description: string;
     complete: boolean;

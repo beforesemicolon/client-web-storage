@@ -24,11 +24,11 @@ const todoSchema = new Schema("todo");
 If using `Typescript`, you have the option to further tell how the data looks like.
 
 ```ts
-interface User extends Schema.DefaultValue {
+interface User extends SchemaDefaultValues {
 	name: string;
 }
 
-interface ToDo extends Schema.DefaultValue {
+interface ToDo extends SchemaDefaultValues {
 	name: string;
 	description: string;
 	complete: boolean;
@@ -113,11 +113,11 @@ A schema lets you define a single object, but the power of a schema resides in i
 Below is an example of how we could nest the `user` schema inside the `todo` schema.
 
 ```js
-interface User extends Schema.DefaultValue {
+interface User extends SchemaDefaultValues {
     name: string;
 }
 
-interface ToDo extends Schema.DefaultValue {
+interface ToDo extends SchemaDefaultValues {
     name: string;
     description: string;
     complete: boolean;
