@@ -1,6 +1,7 @@
 import localforage, {LOCALSTORAGE, WEBSQL, INDEXEDDB} from 'localforage';
 import {Schema} from "./Schema";
 import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+import {SchemaDefaultValues} from "./types";
 
 localforage.defineDriver(MemoryStore());
 
@@ -11,7 +12,7 @@ const defaultConfig = {
 	appName: "App",
 }
 
-export class ClientStore<T extends Schema.DefaultValue> {
+export class ClientStore<T extends SchemaDefaultValues> {
 	#store: LocalForage;
 	#config: ClientStore.Config;
 	#storeName: string;
@@ -379,9 +380,9 @@ export namespace ClientStore {
 	
 	export type UnSubscriber = () => void;
 	
-	type BeforeChangeHandlerData<T extends Schema.DefaultValue> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
+	type BeforeChangeHandlerData<T extends SchemaDefaultValues> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
 	
-	export type BeforeChangeHandler<T extends Schema.DefaultValue> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<boolean> | boolean;
+	export type BeforeChangeHandler<T extends SchemaDefaultValues> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<boolean> | boolean;
 	
 	export interface Config {
 		appName?: string;

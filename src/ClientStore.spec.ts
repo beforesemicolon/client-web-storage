@@ -1,16 +1,17 @@
 import {ClientStore} from "./ClientStore";
-import {Schema, SchemaValue} from "./Schema";
+import {Schema} from "./Schema";
 import {MEMORY_STORAGE} from "./MemoryStore";
 import UnSubscriber = ClientStore.UnSubscriber;
-import objectContaining = jasmine.objectContaining;
+import {SchemaDefaultValues} from "./types";
+import {SchemaValue} from "./SchemaValue";
 
 describe('ClientStore', () => {
-	interface User extends Schema.DefaultValue {
+	interface User extends SchemaDefaultValues {
 		name: string;
 		avatar: string;
 	}
 	
-	interface ToDo extends Schema.DefaultValue {
+	interface ToDo extends SchemaDefaultValues {
 		name: string;
 		description: string;
 		user: User;

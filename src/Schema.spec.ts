@@ -1,35 +1,7 @@
-import {Schema, SchemaId, SchemaValue} from "./Schema";
-
-describe('SchemaValue', () => {
-	it('should create', () => {
-		expect((new SchemaValue(Number)).toJSON()).toEqual({
-			"defaultValue": 0,
-			"required": false,
-			"type": "Number"
-		})
-		expect((new SchemaValue(Number)).toString()).toEqual("{\n" +
-			"    \"type\": \"Number\",\n" +
-			"    \"required\": false,\n" +
-			"    \"defaultValue\": 0\n" +
-			"}")
-		expect((new SchemaValue(SchemaId, true)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": null,
-			"required": true,
-			"type": "SchemaId"
-		}))
-		expect((new SchemaValue(String, false, "sample")).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": "sample",
-			"required": false,
-			"type": "String"
-		}))
-	});
-	
-	it('should throw error if invalid default value type', () => {
-		expect(() => new SchemaValue(String, false, 12)).toThrowError(`Default value "12" does not match type "String"`)
-		expect(() => new SchemaValue(SchemaId, true, "sample")).toThrowError(`Default value "sample" does not match type "SchemaId"`)
-		expect(() => new SchemaValue(SchemaId, true, {} as any)).toThrowError(`Default value "[object Object]" does not match type "SchemaId"`)
-	});
-})
+import {Schema} from "./Schema";
+import {SchemaDefaultValues} from "./types";
+import {SchemaId} from "./SchemaId";
+import {SchemaValue} from "./SchemaValue";
 
 describe('Schema', () => {
 	it('should fail if obj is invalid', () => {
@@ -40,7 +12,7 @@ describe('Schema', () => {
 	});
 	
 	describe('should handle simple types', () => {
-		interface ToDo extends Schema.DefaultValue {
+		interface ToDo extends SchemaDefaultValues {
 			name: string;
 			description: string;
 			userId: number;
@@ -178,7 +150,7 @@ describe('Schema', () => {
 	
 	describe("should handle complex types", () => {
 		it('Blob', () => {
-			interface DT extends Schema.DefaultValue {
+			interface DT extends SchemaDefaultValues {
 				data: Blob;
 			}
 			
@@ -226,7 +198,7 @@ describe('Schema', () => {
 		});
 		
 		it('Array', () => {
-			interface DT extends Schema.DefaultValue {
+			interface DT extends SchemaDefaultValues {
 				data: [];
 			}
 			
@@ -273,7 +245,7 @@ describe('Schema', () => {
 		});
 		
 		it('ArrayBuffer', () => {
-			interface DT extends Schema.DefaultValue {
+			interface DT extends SchemaDefaultValues {
 				data: ArrayBuffer;
 			}
 			
@@ -320,7 +292,7 @@ describe('Schema', () => {
 		});
 		
 		it('Int32Array', () => {
-			interface DT extends Schema.DefaultValue {
+			interface DT extends SchemaDefaultValues {
 				data: Int32Array;
 			}
 			
@@ -369,7 +341,7 @@ describe('Schema', () => {
 	})
 	
 	describe('should handle no default values schema', () => {
-		interface ParkingTicket extends Schema.DefaultValue {
+		interface ParkingTicket extends SchemaDefaultValues {
 			ticketId: SchemaId;
 			arrivalTime: Date;
 			departureTime: Date;
@@ -415,7 +387,7 @@ describe('Schema', () => {
 	});
 	
 	it('should handle nested schemas', () => {
-		interface ToDo extends Schema.DefaultValue {
+		interface ToDo extends SchemaDefaultValues {
 			name: string;
 			description: string;
 			user: {
