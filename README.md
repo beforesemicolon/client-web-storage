@@ -46,14 +46,14 @@ interface ToDo extends Schema.DefaultValue {
 }
 
 // create and define schema
-const todoShema = new Schema<ToDo>("todo");
+const todoSchema = new Schema<ToDo>("todo");
 
-todoShema.defineField("name", String, {required: true});
-todoShema.defineField("description", String, "No Description");
-todoShema.defineField("complete", Boolean);
+todoSchema.defineField("name", String, {required: true});
+todoSchema.defineField("description", String, "No Description");
+todoSchema.defineField("complete", Boolean);
 
 // create and use the store
-const todoStore = new ClientStore("todos", todoShema);
+const todoStore = new ClientStore("todos", todoSchema);
 
 todoStore.createItem({
     name: "Go to Gym" // only name is required

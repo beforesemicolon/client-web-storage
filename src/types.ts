@@ -1,19 +1,13 @@
-import {SchemaId} from "./SchemaId";
 import {SchemaValue} from "./SchemaValue";
+import {CustomType} from "./CustomTypes/CustomType";
 
-interface BlobConstructor {
+export interface BlobConstructor {
 	prototype: Blob;
 
 	new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
 }
 
-interface SchemaIdConstructor {
-	prototype: SchemaId;
-
-	new(): SchemaId;
-}
-
-export interface Schema<T extends SchemaDefaultValues> {
+export interface Schema<T extends SchemaDefaultValues> extends CustomType {
 	new (name: string, obj: SchemaValueMap | null, includeDefaultKey: boolean): Schema<T>;
 	readonly name: string;
 	readonly includeDefaultKeys: boolean;
@@ -30,8 +24,7 @@ export interface Schema<T extends SchemaDefaultValues> {
 }
 
 export type SchemaValueConstructorType =
-	| Schema<any>
-	| SchemaIdConstructor
+	| typeof CustomType
 	| DateConstructor
 	| NumberConstructor
 	| StringConstructor
@@ -51,7 +44,7 @@ export type SchemaValueConstructorType =
 
 export type SchemaValueType = null
 	| Schema<any>
-	| SchemaId
+	| CustomType
 	| Date
 	| Number
 	| String
@@ -70,9 +63,9 @@ export type SchemaValueType = null
 	| Uint32Array;
 
 export interface JSONValue {
-	type: string | SchemaJSON;
+	type: string;
 	required: boolean;
-	defaultValue: SchemaValueType;
+	defaultValue: SchemaValueType | SchemaJSON;
 }
 
 export interface SchemaJSON {

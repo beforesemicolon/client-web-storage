@@ -1,8 +1,9 @@
-import {SchemaValueConstructorType, SchemaValueType} from "../types";
+import {SchemaJSON, SchemaValueConstructorType, SchemaValueType} from "../types";
 import {Schema} from "../Schema";
+import {CustomType} from "../CustomTypes/CustomType";
 
-export const getDefaultValue = (type: SchemaValueConstructorType | Schema<any>): SchemaValueType => {
-	switch (type) {
+export const getDefaultValue = (Type: SchemaValueConstructorType | Schema<any>): SchemaValueType | SchemaJSON => {
+	switch (Type) {
 		case Number:
 			return 0;
 		case Boolean:
@@ -19,10 +20,18 @@ export const getDefaultValue = (type: SchemaValueConstructorType | Schema<any>):
 		case Uint8ClampedArray:
 		case Uint16Array:
 		case Uint32Array:
-			return new type();
-		case ArrayBuffer:
-			return new type(0);
+			return new Type();
 		default:
+			// Custom types
+			if (/SchemaId|Array<.+>/.test(Type.name)) {
+				// @ts-ignore
+				return ((new (Type)()).defaultValue);
+			}
+			
+			if (Type instanceof Schema) {
+				return Object.entries(Type.toJSON()).reduce((acc, [k, val]) => ({...acc, [k]: val.defaultValue}), {});
+			}
+			
 			return null;
 	}
 }

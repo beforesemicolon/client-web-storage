@@ -3,8 +3,9 @@ import {isEmptyString} from "./utils/is-empty-string";
 import {isSupportedTypeValue} from "./utils/is-supported-type-value";
 import {SchemaValue} from "./SchemaValue";
 import {isSameValueType} from "./utils/is-same-value-type";
-import {SchemaId} from "./SchemaId";
+import {SchemaId} from "./CustomTypes/SchemaId";
 import {SchemaDefaultValues, SchemaJSON, SchemaValueMap, SchemaValueConstructorType} from "./types";
+import {CustomType} from "./CustomTypes/CustomType";
 
 export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 	#defaultKeys = ["id", "createdDate", "lastUpdatedDate"]
@@ -51,10 +52,10 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		return this.#defaultKeys;
 	}
 	
-	defineField(name: keyof T, type: SchemaValueConstructorType, {
+	defineField(name: keyof T, type: SchemaValueConstructorType | Schema<any>, {
 		defaultValue,
 		required
-	}: { defaultValue?: any, required?: boolean } = {defaultValue: null, required: false}) {
+	}: { defaultValue?: any, required?: boolean } = {}) {
 		this.#obj[`${name}`] = new SchemaValue(type, required, defaultValue);
 	}
 	
@@ -115,9 +116,16 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 	}
 	
 	isValidFieldValue(name: string | keyof T, value: any = null): boolean {
-		const val = this.getField(`${name}`) as SchemaValue;
+		const val = this.getField(`${name}`);
 		
 		if (val) {
+			if (/Array<.+>/.test(val.type.name)) {
+				const Type = (new (val.type as any)());
+				
+				return value instanceof Array &&
+					!value.some(v => !(v instanceof Type.type || typeof v === Type.type.name.toLowerCase()))
+			}
+			
 			if (value instanceof Array && value.some(v => !isSupportedTypeValue(v))) {
 				return false;
 			}
@@ -170,7 +178,6 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey)) {
 				const val = this.#obj[mapKey];
-				
 				json[mapKey] = val.toJSON();
 			}
 		}
@@ -187,7 +194,7 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		
 		const obj: { [k: string]: any } = this.includeDefaultKeys ? {
 			// set default key values
-			id: (new SchemaId()).value,
+			id: (new SchemaId()).defaultValue,
 			createdDate: nowDate,
 			lastUpdatedDate: nowDate,
 		} : {};
@@ -195,13 +202,12 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey) && !this.defaultKeys.includes(mapKey)) {
 				const val = this.#obj[mapKey];
-				
 				switch (true) {
 					case val.type instanceof Schema:
-						obj[mapKey] = (val.type as Schema<any>).toValue();
+						obj[mapKey] = (val.type as any).toValue();
 						break;
 					case val.type === SchemaId:
-						obj[mapKey] = (new SchemaId()).value;
+						obj[mapKey] = (new SchemaId()).defaultValue;
 						break;
 					case val.type === Date:
 						obj[mapKey] = val.defaultValue instanceof Date ? val.defaultValue : nowDate;
