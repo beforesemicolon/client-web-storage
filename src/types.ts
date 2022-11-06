@@ -1,26 +1,11 @@
 import {SchemaValue} from "./SchemaValue";
 import {CustomType} from "./CustomTypes/CustomType";
+import {Schema} from "./Schema";
 
 export interface BlobConstructor {
 	prototype: Blob;
 
 	new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
-}
-
-export interface Schema<T extends SchemaDefaultValues> extends CustomType {
-	new (name: string, obj: SchemaValueMap | null, includeDefaultKey: boolean): Schema<T>;
-	readonly name: string;
-	readonly includeDefaultKeys: boolean;
-	readonly defaultKeys: ["id", "createdDate", "lastUpdatedDate"];
-	defineField: (name: keyof T, type: SchemaValueConstructorType, options: { defaultValue: any, required: boolean; }) => void;
-	removeField: (name: string | keyof T) => void;
-	hasField: (name: string | keyof T) => boolean;
-	getField: (name: string | keyof T) => SchemaValue | null;
-	isValidFieldValue: (name: string | keyof T, value: any) => boolean;
-	getInvalidSchemaDataFields: (value: { [k: string]: any }) => string[];
-	toJSON: () => SchemaJSON;
-	toString: () => string;
-	toValue: () => T;
 }
 
 export type SchemaValueConstructorType =

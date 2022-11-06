@@ -78,6 +78,11 @@ describe('SchemaValue', () => {
 			"required": true,
 			"type": "Array<String>"
 		}))
+		expect((new SchemaValue(ArrayOf(userSchema), true)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": [],
+			"required": true,
+			"type": "Array<Schema<user>>"
+		}))
 		expect((new SchemaValue(ArrayOf(ArrayOf(Number)), true)).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": [],
 			"required": true,
