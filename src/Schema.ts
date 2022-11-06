@@ -136,7 +136,7 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 			
 			return val.required
 				? !isNil(value) && (val.type !== String || !isEmptyString(value)) && isSameValueType(val.type, value)
-				: value === null || value === val.defaultValue || isSameValueType(val.type, value);
+				: isSameValueType(val.type, value);
 		}
 		
 		return false;

@@ -4,7 +4,7 @@ import {Schema} from "../Schema";
 export class CustomType {
 	constructor(
 		public name: string,
-		public type: SchemaValueConstructorType | Schema<any>,
+		public type: SchemaValueConstructorType | Schema<any> | Array<SchemaValueConstructorType | Schema<any>>,
 		public defaultValue: SchemaValueType,
 	) {
 	}

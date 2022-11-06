@@ -2,6 +2,7 @@ import {SchemaValue} from "./SchemaValue";
 import {SchemaId} from "./CustomTypes/SchemaId";
 import {ArrayOf} from "./CustomTypes/ArrayOf";
 import {Schema} from "./Schema";
+import {OneOf} from "./CustomTypes/OneOf";
 
 describe('SchemaValue', () => {
 	it('should create', () => {
@@ -88,6 +89,16 @@ describe('SchemaValue', () => {
 			"required": true,
 			"type": "Array<Array<Number>>"
 		}))
+		expect((new SchemaValue(OneOf(Number, Boolean), true)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": null,
+			"required": true,
+			"type": "OneOf<Number, Boolean>"
+		}))
+		expect((new SchemaValue(OneOf(userSchema, String), true)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": null,
+			"required": true,
+			"type": "OneOf<Schema<user>, String>"
+		}))
 		expect((new SchemaValue(Array, true)).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": [],
 			"required": true,
@@ -107,6 +118,9 @@ describe('SchemaValue', () => {
 		expect(() => new SchemaValue(new Schema<any>("user"), true, {})).toThrowError(`Default value does not match type "Schema<user>"`)
 		expect(() => new SchemaValue(SchemaId, true, "sample")).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(SchemaId, true, {} as any)).toThrowError(`Default value does not match type "SchemaId"`)
+		expect(() => new SchemaValue(OneOf(String), false, 12)).toThrowError(`OneOf requires more than single type listed comma separated`)
+		expect(() => new SchemaValue(OneOf(String, Boolean), false, 12)).toThrowError(`Default value does not match type "OneOf<String, Boolean>"`)
+		expect(() => new SchemaValue(OneOf(String, Boolean), false, false)).not.toThrowError()
 		expect(() => new SchemaValue(ArrayOf(String), true, 12)).toThrowError(`Default value does not match type "Array<String>"`)
 		expect(() => new SchemaValue(ArrayOf(String), true)).not.toThrowError()
 	});

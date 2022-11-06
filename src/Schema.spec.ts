@@ -3,6 +3,7 @@ import {SchemaDefaultValues} from "./types";
 import {SchemaId} from "./CustomTypes/SchemaId";
 import {SchemaValue} from "./SchemaValue";
 import {ArrayOf} from "./CustomTypes/ArrayOf";
+import {OneOf} from "./CustomTypes/OneOf";
 
 describe('Schema', () => {
 	it('should fail if obj is invalid', () => {
@@ -123,7 +124,7 @@ describe('Schema', () => {
 			
 			expect(todoSchema.isValidFieldValue("state", 120)).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("state", "sample")).toBeFalsy()
-			expect(todoSchema.isValidFieldValue("state")).toBeTruthy()
+			expect(todoSchema.isValidFieldValue("state")).toBeFalsy()
 			
 			expect(todoSchema.isValidFieldValue("name", "sample")).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("name", 120)).toBeFalsy()
@@ -131,7 +132,7 @@ describe('Schema', () => {
 			
 			expect(todoSchema.isValidFieldValue("selected", true)).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("selected", "sample")).toBeFalsy()
-			expect(todoSchema.isValidFieldValue("selected")).toBeTruthy()
+			expect(todoSchema.isValidFieldValue("selected")).toBeFalsy()
 			
 			expect(todoSchema.isValidFieldValue("userId", new SchemaId())).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("userId", "sample")).toBeFalsy()
@@ -296,6 +297,58 @@ describe('Schema', () => {
 			expect(arraySchema.getInvalidSchemaDataFields({
 				data: [],
 			})).toEqual([])
+		});
+		
+		it('OneOf', () => {
+			interface DT extends SchemaDefaultValues {
+				data: Array<Number>;
+			}
+			
+			const arraySchema = new Schema<DT>("array", {
+				data: new SchemaValue(OneOf(Number, String))
+			})
+			
+			expect(arraySchema.toJSON()).toBeDefined()
+			expect(arraySchema.toJSON()).toEqual({
+				"createdDate": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				},
+				"data": {
+					"defaultValue": null,
+					"required": false,
+					"type": "OneOf<Number, String>"
+				},
+				"id": {
+					"defaultValue": expect.any(String),
+					"required": false,
+					"type": "SchemaId"
+				},
+				"lastUpdatedDate": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				}
+			})
+			expect(arraySchema.isValidFieldValue("data", [12])).toBeFalsy()
+			expect(arraySchema.isValidFieldValue("data", new Number(99))).toBeTruthy()
+			expect(arraySchema.isValidFieldValue("data", 34)).toBeTruthy()
+			expect(arraySchema.isValidFieldValue("data", new String("sample"))).toBeTruthy()
+			expect(arraySchema.isValidFieldValue("data", "sample")).toBeTruthy()
+			expect(arraySchema.getInvalidSchemaDataFields({
+				new: "yes"
+			})).toEqual(["new"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: 12,
+				obj: "yes"
+			})).toEqual(["obj"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: "sample",
+			})).toEqual([])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: null,
+			})).toEqual(["data"])
 		});
 		
 		it('ArrayBuffer', () => {
@@ -569,5 +622,153 @@ describe('Schema', () => {
 			"required": true,
 			"type": "Schema<user>"
 		});
+	});
+	
+	it('should handle all', () => {
+		const userSchema = new Schema("user", {
+			name: new SchemaValue(String, true),
+			avatar: new SchemaValue(String),
+		});
+		const itemSchema = new Schema("item", {
+			name: new SchemaValue(String, true),
+			description: new SchemaValue(String),
+			user: new SchemaValue(userSchema, true),
+			selected: new SchemaValue(Boolean),
+			count: new SchemaValue(Number),
+			total: new SchemaValue(OneOf(String, Number)),
+			realTotal: new SchemaValue(Int32Array),
+			values: new SchemaValue(ArrayOf(Number)),
+			image: new SchemaValue(Blob),
+			buffer: new SchemaValue(ArrayBuffer),
+		});
+		
+		expect(itemSchema.toJSON()).toEqual({
+			"buffer": {
+				"defaultValue": null,
+				"required": false,
+				"type": "ArrayBuffer"
+			},
+			"count": {
+				"defaultValue": 0,
+				"required": false,
+				"type": "Number"
+			},
+			"createdDate": {
+				"defaultValue": null,
+				"required": false,
+				"type": "Date"
+			},
+			"description": {
+				"defaultValue": "",
+				"required": false,
+				"type": "String"
+			},
+			"id": {
+				"defaultValue": expect.any(String),
+				"required": false,
+				"type": "SchemaId"
+			},
+			"image": {
+				"defaultValue": null,
+				"required": false,
+				"type": "Blob"
+			},
+			"lastUpdatedDate": {
+				"defaultValue": null,
+				"required": false,
+				"type": "Date"
+			},
+			"name": {
+				"defaultValue": "",
+				"required": true,
+				"type": "String"
+			},
+			"realTotal": {
+				"defaultValue": expect.any(Int32Array),
+				"required": false,
+				"type": "Int32Array"
+			},
+			"selected": {
+				"defaultValue": false,
+				"required": false,
+				"type": "Boolean"
+			},
+			"total": {
+				"defaultValue": null,
+				"required": false,
+				"type": "OneOf<String, Number>"
+			},
+			"user": {
+				"defaultValue": {
+					"avatar": "",
+					"createdDate": null,
+					"id": expect.any(String),
+					"lastUpdatedDate": null,
+					"name": ""
+				},
+				"required": true,
+				"type": "Schema<user>"
+			},
+			"values": {
+				"defaultValue": [],
+				"required": false,
+				"type": "Array<Number>"
+			}
+		})
+		expect(itemSchema.getInvalidSchemaDataFields({
+			name: "my todo",
+			user: {
+				name: "John Doe"
+			}
+		})).toEqual([])
+		expect(itemSchema.getInvalidSchemaDataFields({
+			name: "item",
+			description: "some desc",
+			user: {
+				name: "John Doe"
+			},
+			selected: true,
+			count: 12,
+			total: "12",
+			realTotal: new Int32Array(8),
+			values: [2, 4, 6],
+			image: new Blob(),
+			buffer: new ArrayBuffer(8),
+		})).toEqual([])
+		expect(itemSchema.getInvalidSchemaDataFields({
+			name: "item",
+			description: "some desc",
+			user: {
+				name: "John Doe"
+			},
+			selected: true,
+			count: 12,
+			total: 12,
+			realTotal: new Int32Array(8),
+			values: [2, 4, 6],
+			image: new Blob(),
+			buffer: new ArrayBuffer(8),
+		})).toEqual([])
+		expect(itemSchema.getInvalidSchemaDataFields({
+			name: "item",
+			description: "some desc",
+			user: {
+				name: "John Doe"
+			},
+			selected: true,
+			count: "12",
+			total: true,
+			realTotal: new Array(8),
+			values: [true],
+			image: "sample",
+			buffer: [],
+		})).toEqual([
+			"count",
+			"total",
+			"realTotal",
+			"values",
+			"image",
+			"buffer"
+		])
 	});
 });
