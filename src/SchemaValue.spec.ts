@@ -107,6 +107,10 @@ describe('SchemaValue', () => {
 	});
 
 	it('should throw error if invalid default value type', () => {
+		const userSchema = new Schema<any>("user");
+		
+		userSchema.defineField("name", String, {required: true});
+		
 		expect(() => new SchemaValue(String, false, 12)).toThrowError(`Default value does not match type "String"`)
 		expect(() => new SchemaValue(Number, false, true)).toThrowError(`Default value does not match type "Number"`)
 		expect(() => new SchemaValue(Boolean, false, "")).toThrowError(`Default value does not match type "Boolean"`)
@@ -115,7 +119,7 @@ describe('SchemaValue', () => {
 		expect(() => new SchemaValue(ArrayBuffer, true, [])).toThrowError(`Default value does not match type "ArrayBuffer"`)
 		expect(() => new SchemaValue(Int32Array, true, [])).toThrowError(`Default value does not match type "Int32Array"`)
 		expect(() => new SchemaValue(Blob, true, {})).toThrowError(`Default value does not match type "Blob"`)
-		expect(() => new SchemaValue(new Schema<any>("user"), true, {})).toThrowError(`Default value does not match type "Schema<user>"`)
+		expect(() => new SchemaValue(userSchema, true, {})).toThrowError(`Default value does not match type "Schema<user>"`)
 		expect(() => new SchemaValue(SchemaId, true, "sample")).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(SchemaId, true, {} as any)).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(OneOf(String), false, 12)).toThrowError(`OneOf requires more than single type listed comma separated`)

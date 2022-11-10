@@ -1,16 +1,25 @@
 import {SchemaValueConstructorType} from "../types";
 import {Schema} from "../Schema";
+import {isSupportedTypeValue} from "./is-supported-type-value";
+import {isOfSupportedType} from "./is-of-supported-type";
 
-export const isSameValueType = (type: SchemaValueConstructorType | Schema<any>, value: any) => {
+export const isSameValueType = (type: SchemaValueConstructorType | Schema<any>, value: any): boolean => {
 	try {
-		if (/OneOf<.+>/.test(type.name)) {
-			const c = new (type as any)();
-			// @ts-ignore
-			return c.type.some(t => value instanceof t || typeof value === t.name.toLowerCase())
+		if (/Array<.+>/.test(type.name)) {
+			const Type = (new (type as any)());
+			
+			return value instanceof Array && !value.some(v => !isSameValueType(Type.type, v))
 		}
 		
-		// @ts-ignore
-		return value instanceof type || typeof value === type.name.toLowerCase()
+		if (value instanceof Array && value.some(v => !isSupportedTypeValue(v))) {
+			return false;
+		}
+		
+		if (/OneOf<.+>/.test(type.name)) {
+			return new (type as any)().type.some((t: SchemaValueConstructorType | Schema<any>) => isSameValueType(t, value))
+		}
+		
+		return isOfSupportedType(type, value);
 	} catch (e) {
 		return false
 	}

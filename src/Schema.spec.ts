@@ -247,15 +247,10 @@ describe('Schema', () => {
 		});
 
 		it('ArrayOf', () => {
-			interface DT extends SchemaDefaultValues {
-				data: Array<Number>;
-			}
-
-			const arraySchema = new Schema<DT>("array", {
+			let arraySchema = new Schema("array", {
 				data: new SchemaValue(ArrayOf(Number), true)
 			})
 
-			expect(arraySchema.toJSON()).toBeDefined()
 			expect(arraySchema.toJSON()).toEqual({
 				"createdDate": {
 					"defaultValue": null,
@@ -297,19 +292,46 @@ describe('Schema', () => {
 			expect(arraySchema.getInvalidSchemaDataFields({
 				data: [],
 			})).toEqual([])
+			
+			const userSchema = new Schema("user", {
+				name: new SchemaValue(String, true),
+				avatar: new SchemaValue(String),
+			});
+			
+			arraySchema = new Schema("array", {
+				data: new SchemaValue(ArrayOf(userSchema), true)
+			}, false);
+			
+			expect(arraySchema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": [],
+					"required": true,
+					"type": "Array<Schema<user>>"
+				}
+			})
+			
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [
+					{}
+				]
+			})).toEqual(["data[0].name"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [
+					{
+						name: "john"
+					},
+					12,
+				]
+			})).toEqual(["data[1]"])
 		});
 		
 		it('OneOf', () => {
-			interface DT extends SchemaDefaultValues {
-				data: Array<Number>;
-			}
-			
-			const arraySchema = new Schema<DT>("array", {
+			let oneOfSchema = new Schema("array", {
 				data: new SchemaValue(OneOf(Number, String))
 			})
 			
-			expect(arraySchema.toJSON()).toBeDefined()
-			expect(arraySchema.toJSON()).toEqual({
+			expect(oneOfSchema.toJSON()).toBeDefined()
+			expect(oneOfSchema.toJSON()).toEqual({
 				"createdDate": {
 					"defaultValue": null,
 					"required": false,
@@ -331,24 +353,56 @@ describe('Schema', () => {
 					"type": "Date"
 				}
 			})
-			expect(arraySchema.isValidFieldValue("data", [12])).toBeFalsy()
-			expect(arraySchema.isValidFieldValue("data", new Number(99))).toBeTruthy()
-			expect(arraySchema.isValidFieldValue("data", 34)).toBeTruthy()
-			expect(arraySchema.isValidFieldValue("data", new String("sample"))).toBeTruthy()
-			expect(arraySchema.isValidFieldValue("data", "sample")).toBeTruthy()
-			expect(arraySchema.getInvalidSchemaDataFields({
+			expect(oneOfSchema.isValidFieldValue("data", [12])).toBeFalsy()
+			expect(oneOfSchema.isValidFieldValue("data", new Number(99))).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", 34)).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", new String("sample"))).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", "sample")).toBeTruthy()
+			expect(oneOfSchema.getInvalidSchemaDataFields({
 				new: "yes"
 			})).toEqual(["new"])
-			expect(arraySchema.getInvalidSchemaDataFields({
+			expect(oneOfSchema.getInvalidSchemaDataFields({
 				data: 12,
 				obj: "yes"
 			})).toEqual(["obj"])
-			expect(arraySchema.getInvalidSchemaDataFields({
+			expect(oneOfSchema.getInvalidSchemaDataFields({
 				data: "sample",
 			})).toEqual([])
-			expect(arraySchema.getInvalidSchemaDataFields({
+			expect(oneOfSchema.getInvalidSchemaDataFields({
 				data: null,
 			})).toEqual(["data"])
+			
+			const userSchema = new Schema("user", {
+				name: new SchemaValue(String, true),
+				avatar: new SchemaValue(String),
+			});
+			
+			oneOfSchema = new Schema("array", {
+				data: new SchemaValue(OneOf(userSchema, String), true)
+			}, false);
+			
+			expect(oneOfSchema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": null,
+					"required": true,
+					"type": "OneOf<Schema<user>, String>"
+				}
+			})
+			
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: 23
+			})).toEqual(["data"])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: {}
+			})).toEqual(["data.name"])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: "sample"
+			})).toEqual([])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: {
+					name: "john"
+				}
+			})).toEqual([])
 		});
 		
 		it('ArrayBuffer', () => {
