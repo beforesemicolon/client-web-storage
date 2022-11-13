@@ -19,4 +19,13 @@ if (window) {
 	window.OneOf = OneOf;
 	// @ts-ignore
 	window.ClientStore = ClientStore;
+	// @ts-ignore
+	window.CWS = {
+		Schema,
+		SchemaValue,
+		SchemaId,
+		ArrayOf,
+		OneOf,
+		ClientStore
+	}
 }
