@@ -230,7 +230,7 @@ export class Schema<T> implements Schema<T> {
 				const val = this.#obj[mapKey];
 				switch (true) {
 					case val.type instanceof Schema:
-						obj[mapKey] = (val.type as any).toValue();
+						obj[mapKey] = (val.type as Schema<any>).toValue();
 						break;
 					case val.type === SchemaId:
 						obj[mapKey] = (new SchemaId()).defaultValue;
