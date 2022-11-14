@@ -32,7 +32,7 @@ describe('ClientStore', () => {
 	});
 	
 	let onChange = jest.fn();
-	let beforeChange = jest.fn(() => true);
+	let beforeChange: any = jest.fn(() => true);
 	let todoStore: ClientStore<ToDo>;
 	let unsubChange: UnSubscriber;
 	let unsubBeforeChange: UnSubscriber;
@@ -65,6 +65,90 @@ describe('ClientStore', () => {
 			// @ts-ignore
 			sample: Symbol('invalid')
 		})).toThrowError('Missing or unknown "Schema"')
+	});
+	
+	describe('should replace data on "beforeChange" when', () => {
+		const data = {
+			name: "Buy groceries",
+			user: {
+				name: "John Doe",
+				avatar: ""
+			}
+		};
+		const returnData = {
+			...data,
+			id: "kjef3832o39dj389o9qz0sm34",
+			user: {...data.user, id: "98324jsq38o4q9847n8rsd"}
+		};
+		const expectedResult = {
+			"createdDate": expect.any(Date),
+			"description": "",
+			"id": returnData.id,
+			"lastUpdatedDate": expect.any(Date),
+			"name": "Buy groceries",
+			"selected": false,
+			"state": "",
+			"user": {
+				"avatar": "",
+				"id": returnData.user.id,
+				"name": "John Doe"
+			}
+		};
+		
+		beforeEach(async () => {
+			await todoStore.clear()
+		})
+		
+		afterEach(() => {
+			beforeChange.mockRestore();
+		})
+		
+		it('create item', async () => {
+			onChange.mockClear();
+			
+			beforeChange.mockReturnValue(returnData);
+			
+			const newTodo = await todoStore.createItem(data);
+			
+			expect(onChange).toHaveBeenCalledWith(
+				ClientStore.EventType.CREATED,
+				expectedResult
+			);
+			expect(newTodo).toEqual(expectedResult);
+			expect(todoStore.size).toBe(1);
+			
+			beforeChange.mockRestore();
+		});
+		
+		it('update item', async () => {
+			const newTodo = await todoStore.createItem(data);
+
+			onChange.mockClear();
+
+			beforeChange.mockReturnValue(returnData);
+
+			const res = await todoStore.updateItem(newTodo?.id, {
+				name: "buy shoes"
+			});
+
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.UPDATED, expectedResult);
+			expect(res).toEqual(expectedResult)
+		});
+		
+		it('load items', async () => {
+			onChange.mockClear();
+			beforeChange.mockReturnValue([
+				returnData
+			]);
+			
+			const res = await todoStore.loadItems([data]);
+			
+			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.LOADED, [expectedResult]);
+			expect(res).toEqual([expectedResult])
+			expect(todoStore.size).toBe(1);
+			
+			beforeChange.mockRestore();
+		});
 	});
 	
 	describe('should abort when', () => {
@@ -243,7 +327,7 @@ describe('ClientStore', () => {
 				details: {
 					name: 12
 				}
-			}])
+			}] as any)
 			
 			expect(onChange).toHaveBeenCalledWith(ClientStore.EventType.ERROR, expect.objectContaining({
 				action: ClientStore.EventType.LOADED,
@@ -375,14 +459,44 @@ describe('ClientStore', () => {
 	
 	it('should CRUD item', async () => {
 		// check failures
-		await expect(todoStore.createItem({})).rejects.toThrowError('Failed to create item. Field(s) "name, user" do not match the schema:')
-		await expect(todoStore.createItem({
+		await todoStore.createItem({})
+		await todoStore.createItem({
 			name: "Buy groceries"
-		})).rejects.toThrowError('Failed to create item. Field(s) "user" do not match the schema:')
-		await expect(todoStore.createItem({
+		})
+		await todoStore.createItem({
 			name: "Buy groceries",
 			user: {}
-		} as any)).rejects.toThrowError('Failed to create item. Field(s) "user.name" do not match the schema:')
+		} as any)
+		
+		expect(onChange).toHaveBeenCalledTimes(3)
+		expect((onChange as jest.Mock).mock.calls[0][0]).toEqual(ClientStore.EventType.ERROR)
+		expect((onChange as jest.Mock).mock.calls[0][1]).toEqual({
+			action: ClientStore.EventType.CREATED,
+			data: {},
+			error: expect.any(Error)
+		})
+		expect((onChange as jest.Mock).mock.calls[0][1].error.message).toMatch('Failed to create item. Field(s) "name, user" do not match the schema:')
+		
+		expect((onChange as jest.Mock).mock.calls[1][0]).toEqual(ClientStore.EventType.ERROR)
+		expect((onChange as jest.Mock).mock.calls[1][1]).toEqual({
+			action: ClientStore.EventType.CREATED,
+			data: {
+				name: "Buy groceries"
+			},
+			error: expect.any(Error)
+		})
+		expect((onChange as jest.Mock).mock.calls[1][1].error.message).toMatch('Failed to create item. Field(s) "user" do not match the schema:')
+		
+		expect((onChange as jest.Mock).mock.calls[2][0]).toEqual(ClientStore.EventType.ERROR)
+		expect((onChange as jest.Mock).mock.calls[2][1]).toEqual({
+			action: ClientStore.EventType.CREATED,
+			data: {
+				name: "Buy groceries",
+				user: {}
+			},
+			error: expect.any(Error)
+		})
+		expect((onChange as jest.Mock).mock.calls[2][1].error.message).toMatch('Failed to create item. Field(s) "user.name" do not match the schema:')
 		
 		// create
 		let newTodo = await todoStore.createItem({
@@ -391,7 +505,7 @@ describe('ClientStore', () => {
 				name: "John Doe"
 			}
 		} as any) as ToDo
-		
+
 		expect(newTodo).toEqual(expect.objectContaining({
 			"createdDate": expect.any(Date),
 			"description": "",
@@ -409,13 +523,19 @@ describe('ClientStore', () => {
 		// read
 		await expect(todoStore.getItem(newTodo.id as any)).resolves.toEqual(newTodo)
 		await expect(todoStore.getItems()).resolves.toEqual([newTodo])
+		
 		// update
-		await expect(todoStore.updateItem(newTodo.id, {
+		todoStore.updateItem(newTodo.id, {
 			new: "unknown prop"
-		} as any)).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "new" is unknown or has invalid value type: null`)
-		await expect(todoStore.updateItem(newTodo.id, {
+		} as any)
+		
+		expect((onChange as jest.Mock).mock.calls[0][1].error.message).toMatch(`Failed to update item "${newTodo.id}". Key "new" is unknown or has invalid value type: null`)
+		
+		todoStore.updateItem(newTodo.id, {
 			description: 120
-		} as any)).rejects.toThrowError(`Failed to update item "${newTodo.id}". Key "description" is unknown or has invalid value type:`);
+		} as any)
+		
+		expect((onChange as jest.Mock).mock.calls[1][1].error.message).toMatch(`Failed to update item "${newTodo.id}". Key "description" is unknown or has invalid value type:`)
 
 		const updatedTodo = await todoStore.updateItem(newTodo.id, {
 			description: "need to get milk and bread",
