@@ -502,8 +502,9 @@ describe('Schema', () => {
 	})
 	
 	describe('should handle no default values schema', () => {
-		interface ParkingTicket extends SchemaDefaultValues {
-			ticketId: SchemaId;
+		interface ParkingTicket {
+			id: SchemaId;
+			createdDate: Date;
 			arrivalTime: Date;
 			departureTime: Date;
 		}
@@ -513,7 +514,8 @@ describe('Schema', () => {
 		beforeEach(() => {
 			parkingTicketSchema = new Schema("parkingTicket", null, false);
 			
-			parkingTicketSchema.defineField("ticketId", SchemaId, {required: true});
+			parkingTicketSchema.defineField("id", SchemaId, {required: true});
+			parkingTicketSchema.defineField("createdDate", Date);
 			parkingTicketSchema.defineField("arrivalTime", Date);
 			parkingTicketSchema.defineField("departureTime", Date, {defaultValue: undefined});
 		})
@@ -525,12 +527,17 @@ describe('Schema', () => {
 					"required": false,
 					"type": "Date"
 				},
+				"createdDate": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Date"
+				},
 				"departureTime": {
 					"defaultValue": null,
 					"required": false,
 					"type": "Date"
 				},
-				"ticketId": {
+				"id": {
 					"defaultValue": expect.any(String),
 					"required": true,
 					"type": "SchemaId"
@@ -542,7 +549,8 @@ describe('Schema', () => {
 			expect(parkingTicketSchema.toValue()).toEqual(expect.objectContaining({
 				"arrivalTime": expect.any(Date),
 				"departureTime": expect.any(Date),
-				"ticketId": expect.any(String)
+				"createdDate": expect.any(Date),
+				"id": expect.any(String)
 			}))
 		});
 	});
