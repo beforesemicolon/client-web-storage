@@ -1,7 +1,7 @@
 {
   "name": "client-web-storage",
   "description": "Web browser (client) storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with Schema validation.",
-  "version": "1.5.1",
+  "version": "1.5.0",
   "main": "dist/",
   "repository": {
     "url": "https://github.com/beforesemicolon/client-web-storage",
