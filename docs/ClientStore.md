@@ -96,7 +96,7 @@ In case you want to synchronize your data with server, you may want to intercept
 then update the local storage to make sure you don't have to do any cleanups after if the API call ends up failing.
 
 For that you can set the `beforeChange` handler on the store to intercept actions, do what you have to do and return
-a `Boolean` whether to go ahead and update the client storage.
+a `Boolean` whether to go ahead and update the client storage or return the data to update the local store with (for `CREATED`, `UPDATED`, and `LOADED` actions only).
 
 ```ts
 import {ClientStore} from "client-web-storage";
@@ -107,11 +107,11 @@ const todoStore = new ClientStore<ToDo>("todos", todoSchema);
 const unsub = todoStore.beforeChange(async (eventType, data) => {
     switch (eventType) {
         case ClientStore.EventType.CREATED:
-            await todoService.createTodo(data);
-            break;
+            return await todoService.createTodo(data);
         case ClientStore.EventType.UPDATED:
-            await todoService.updateTodo(data.id, data);
-            break;
+            return await todoService.updateTodo(data.id, data);
+	    case ClientStore.EventType.LOADED:
+		    return await todoService.getAllByIds(data.map(m => m.id));
         case ClientStore.EventType.DELETED:
             await todoService.updateTodo(data);
             break;
@@ -127,15 +127,18 @@ const unsub = todoStore.beforeChange(async (eventType, data) => {
 unsub() // call to unsubscribe from the before changes handling
 ```
 
+As you can see in the above example, the `CREATED` and `UPDATED` action returns the data returned by the server
+instead of falling back to `true`. This allows you to update the current local data with what is at the server database.
+
 Any error that is thrown inside the `beforeChange` callback handler will be caught and a `ERROR` event is thrown
 which if you are subscribed to the store, you can respond to.
 
 The `beforeChange` handler is called only for events which are meant to change the state of the store:
-- `created`;
-- `updated`;
-- `loaded`;
-- `deleted`;
-- `cleared`;
+- `CREATED`;
+- `UPDATED`;
+- `LOADED`;
+- `DELETED`;
+- `CLEARED`;
 
 ## CRUD Store
 The store does a lot of the heavy lifting and handles pretty much everything for you while providing a simple `CRUD`
