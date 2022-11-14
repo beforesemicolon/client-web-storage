@@ -151,7 +151,7 @@ export class ClientStore<T extends SchemaDefaultValues> {
 					);
 					
 					this.#size = await this.#store.length();
-
+					this.#broadcast(ClientStore.EventType.LOADED, itemValues);
 					return itemValues
 				} else {
 					this.#broadcast(ClientStore.EventType.ABORTED, {
