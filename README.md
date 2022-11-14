@@ -26,7 +26,7 @@ import {Schema, ClientStore} from "client-web-storage";
 ```
 
 ```js
-const {Schema, ClientStore} = window;
+const {Schema, ClientStore} = window.CWS;
 ```
 
 ## Get Started
