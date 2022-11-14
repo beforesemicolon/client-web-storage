@@ -47,7 +47,7 @@ You can then further define the fields of your schema and there are two ways to 
 ##### Via constructor:
 
 ```ts
-const todoShema = new Schema<ToDo>("todo", {
+const todoSchema = new Schema<ToDo>("todo", {
 	name: new SchemaValue(String, true), // make name required
 	description: new SchemaValue(String),
 	complete: new SchemaValue(Boolean),
@@ -57,11 +57,11 @@ const todoShema = new Schema<ToDo>("todo", {
 ##### Via `defineField` property:
 
 ```ts
-const todoShema = new Schema<ToDo>("todo");
+const todoSchema = new Schema<ToDo>("todo");
 
-todoShema.defineField("name", String, {required: true});
-todoShema.defineField("description", String);
-todoShema.defineField("complete", Boolean);
+todoSchema.defineField("name", String, {required: true});
+todoSchema.defineField("description", String);
+todoSchema.defineField("complete", Boolean);
 ```
 
 Both accomplish the same thing, and it is up to you which one you want to use.
@@ -71,7 +71,7 @@ The `Schema` object comes with the `toValue` method which will return an object 
 with default values.
 
 ```js
-todoShema.toValue()
+todoSchema.toValue()
 /*
 {
   id: "123e4567-e89b-12d3-a456-426614174000",
@@ -100,7 +100,7 @@ The Schema have the following default depending on the types:
 Of-course you may also define your default values when defining each field.
 
 ```js
-todoShema.defineField("description", String, {defaultValue: "No description"});
+todoSchema.defineField("description", String, {defaultValue: "No description"});
 
 // or
 
@@ -129,10 +129,10 @@ const todoSchema = new Schema<ToDo>("todo");
 
 userSchema.defineField("name", String, {required: true});
 
-todoShema.defineField("name", String, {required: true});
-todoShema.defineField("description", String);
-todoShema.defineField("complete", Boolean);
-todoShema.defineField("user", userSchema, {required: true});
+todoSchema.defineField("name", String, {required: true});
+todoSchema.defineField("description", String);
+todoSchema.defineField("complete", Boolean);
+todoSchema.defineField("user", userSchema, {required: true});
 
 ```
 The value of this `todo` schema when calling `toValue` would be, for example:
@@ -160,10 +160,10 @@ You can use dot notation string to access things deeply inside nested schemas.
 
 ```js
 // only works with these
-todoShema.getField("user.name");
-todoShema.hasField("user.name");
-todoShema.removeField("user.name");
-todoShema.isValidFieldValue("user.name", "");
+todoSchema.getField("user.name");
+todoSchema.hasField("user.name");
+todoSchema.removeField("user.name");
+todoSchema.isValidFieldValue("user.name", "");
 ```
 
 ## Validating Value
@@ -182,15 +182,15 @@ userSchema.isValidFieldValue("name", undefined) // false
 
 You may also get all the invalid fields by passing an object to be validated against the schema
 ```js
-todoShema.getInvalidSchemaDataFields({}); // ["name", "user.name"]
-todoShema.getInvalidSchemaDataFields({
+todoSchema.getInvalidSchemaDataFields({}); // ["name", "user.name"]
+todoSchema.getInvalidSchemaDataFields({
   name: "workout"
 }); // ["user.name"]
-todoShema.getInvalidSchemaDataFields({
+todoSchema.getInvalidSchemaDataFields({
   name: "workout",
   user: {}
 }); // ["user.name"]
-todoShema.getInvalidSchemaDataFields({
+todoSchema.getInvalidSchemaDataFields({
   name: "workout",
   user: {
     name: "John Doe"

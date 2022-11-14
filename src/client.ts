@@ -1,5 +1,7 @@
 import {Schema} from './Schema';
-import {SchemaId} from './SchemaId';
+import {SchemaId} from './CustomTypes/SchemaId';
+import {ArrayOf} from './CustomTypes/ArrayOf';
+import {OneOf} from './CustomTypes/OneOf';
 import {SchemaValue} from './SchemaValue';
 import {ClientStore} from './ClientStore';
 
@@ -12,5 +14,18 @@ if (window) {
 	// @ts-ignore
 	window.SchemaId = SchemaId;
 	// @ts-ignore
+	window.ArrayOf = ArrayOf;
+	// @ts-ignore
+	window.OneOf = OneOf;
+	// @ts-ignore
 	window.ClientStore = ClientStore;
+	// @ts-ignore
+	window.CWS = {
+		Schema,
+		SchemaValue,
+		SchemaId,
+		ArrayOf,
+		OneOf,
+		ClientStore
+	}
 }

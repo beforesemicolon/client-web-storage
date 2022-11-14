@@ -161,10 +161,10 @@ const todoSchema = new Schema<ToDo>("todo");
 
 userSchema.defineField("name", String, {required: true});
 
-todoShema.defineField("name", String, {required: true});
-todoShema.defineField("description", String);
-todoShema.defineField("complete", Boolean);
-todoShema.defineField("user", userSchema, {required: true});
+todoSchema.defineField("name", String, {required: true});
+todoSchema.defineField("description", String);
+todoSchema.defineField("complete", Boolean);
+todoSchema.defineField("user", userSchema, {required: true});
 
 // create stores
 const userStore = new ClientStore<User>("users", userSchema);

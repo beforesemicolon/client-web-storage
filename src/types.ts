@@ -1,37 +1,15 @@
-import {SchemaId} from "./SchemaId";
 import {SchemaValue} from "./SchemaValue";
+import {CustomType} from "./CustomTypes/CustomType";
+import {Schema} from "./Schema";
 
-interface BlobConstructor {
+export interface BlobConstructor {
 	prototype: Blob;
 
 	new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
 }
 
-interface SchemaIdConstructor {
-	prototype: SchemaId;
-
-	new(): SchemaId;
-}
-
-export interface Schema<T extends SchemaDefaultValues> {
-	new (name: string, obj: SchemaValueMap | null, includeDefaultKey: boolean): Schema<T>;
-	readonly name: string;
-	readonly includeDefaultKeys: boolean;
-	readonly defaultKeys: ["id", "createdDate", "lastUpdatedDate"];
-	defineField: (name: keyof T, type: SchemaValueConstructorType, options: { defaultValue: any, required: boolean; }) => void;
-	removeField: (name: string | keyof T) => void;
-	hasField: (name: string | keyof T) => boolean;
-	getField: (name: string | keyof T) => SchemaValue | null;
-	isValidFieldValue: (name: string | keyof T, value: any) => boolean;
-	getInvalidSchemaDataFields: (value: { [k: string]: any }) => string[];
-	toJSON: () => SchemaJSON;
-	toString: () => string;
-	toValue: () => T;
-}
-
 export type SchemaValueConstructorType =
-	| Schema<any>
-	| SchemaIdConstructor
+	| typeof CustomType
 	| DateConstructor
 	| NumberConstructor
 	| StringConstructor
@@ -51,7 +29,7 @@ export type SchemaValueConstructorType =
 
 export type SchemaValueType = null
 	| Schema<any>
-	| SchemaId
+	| CustomType
 	| Date
 	| Number
 	| String
@@ -70,9 +48,9 @@ export type SchemaValueType = null
 	| Uint32Array;
 
 export interface JSONValue {
-	type: string | SchemaJSON;
+	type: string;
 	required: boolean;
-	defaultValue: SchemaValueType;
+	defaultValue: SchemaValueType | SchemaJSON;
 }
 
 export interface SchemaJSON {

@@ -3,10 +3,11 @@ import {isEmptyString} from "./utils/is-empty-string";
 import {isSupportedTypeValue} from "./utils/is-supported-type-value";
 import {SchemaValue} from "./SchemaValue";
 import {isSameValueType} from "./utils/is-same-value-type";
-import {SchemaId} from "./SchemaId";
+import {SchemaId} from "./CustomTypes/SchemaId";
 import {SchemaDefaultValues, SchemaJSON, SchemaValueMap, SchemaValueConstructorType} from "./types";
+import {CustomType} from "./CustomTypes/CustomType";
 
-export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
+export class Schema<T> implements Schema<T> {
 	#defaultKeys = ["id", "createdDate", "lastUpdatedDate"]
 	#obj: SchemaValueMap = {
 		id: new SchemaValue(SchemaId, false),
@@ -51,10 +52,10 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		return this.#defaultKeys;
 	}
 	
-	defineField(name: keyof T, type: SchemaValueConstructorType, {
+	defineField(name: keyof T, type: SchemaValueConstructorType | Schema<any>, {
 		defaultValue,
 		required
-	}: { defaultValue?: any, required?: boolean } = {defaultValue: null, required: false}) {
+	}: { defaultValue?: any, required?: boolean } = {}) {
 		this.#obj[`${name}`] = new SchemaValue(type, required, defaultValue);
 	}
 	
@@ -115,20 +116,12 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 	}
 	
 	isValidFieldValue(name: string | keyof T, value: any = null): boolean {
-		const val = this.getField(`${name}`) as SchemaValue;
+		const val = this.getField(`${name}`);
 		
 		if (val) {
-			if (value instanceof Array && value.some(v => !isSupportedTypeValue(v))) {
-				return false;
-			}
-			
-			if (val.type instanceof Schema) {
-				return `${value}` === '[object Object]' && val.type.getInvalidSchemaDataFields(value).length === 0;
-			}
-			
 			return val.required
 				? !isNil(value) && (val.type !== String || !isEmptyString(value)) && isSameValueType(val.type, value)
-				: value === null || value === val.defaultValue || isSameValueType(val.type, value);
+				: isSameValueType(val.type, value);
 		}
 		
 		return false;
@@ -142,11 +135,52 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		for (const valueKey of [...Object.keys(value), ...requiredFields]) {
 			if (!this.defaultKeys.includes(valueKey)) {
 				const schemaVal = this.getField(valueKey as keyof T);
+				const val = value[valueKey];
+				
+				if (/Array<.+>/.test(schemaVal?.type.name ?? '')) {
+					if (!(val instanceof Array)) {
+						invalidFields.add(valueKey);
+						continue;
+					} else {
+						// @ts-ignore
+						const Type = (new (schemaVal.type as any)());
+						
+						if(Type.type instanceof Schema) {
+							val.forEach((v, k) => {
+								if (`${v}` === '[object Object]') {
+									Type.type.getInvalidSchemaDataFields(v).forEach((z: string) => {
+										invalidFields.add(`${valueKey}[${k}].${z}`)
+									})
+								} else {
+									invalidFields.add(`${valueKey}[${k}]`);
+								}
+							})
+							continue;
+						}
+					}
+				}
+				
+				if (/OneOf<.+>/.test(schemaVal?.type.name ?? '')) {
+					// @ts-ignore
+					const Type = (new (schemaVal.type as any)());
+					const schema = Type.type.find((t: any) => t instanceof Schema);
+					
+					if (schema && `${val}` === '[object Object]') {
+						schema.getInvalidSchemaDataFields(val).forEach((k: string) => {
+							invalidFields.add(`${valueKey}.${k}`)
+						})
+					} else {
+						if (!this.isValidFieldValue(valueKey as keyof T, val)) {
+							invalidFields.add(valueKey);
+						}
+					}
+					
+					continue;
+				}
 				
 				if (schemaVal?.type instanceof Schema) {
-					const v = value[valueKey];
-					if (`${v}` === '[object Object]') {
-						schemaVal.type.getInvalidSchemaDataFields(v).forEach((k: string) => {
+					if (`${val}` === '[object Object]') {
+						schemaVal.type.getInvalidSchemaDataFields(val).forEach((k: string) => {
 							invalidFields.add(`${valueKey}.${k}`)
 						})
 					} else {
@@ -155,7 +189,7 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 					continue;
 				}
 				
-				if (!this.isValidFieldValue(valueKey as keyof T, value[valueKey])) {
+				if (!this.isValidFieldValue(valueKey as keyof T, val)) {
 					invalidFields.add(valueKey);
 				}
 			}
@@ -170,7 +204,6 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey)) {
 				const val = this.#obj[mapKey];
-				
 				json[mapKey] = val.toJSON();
 			}
 		}
@@ -187,7 +220,7 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		
 		const obj: { [k: string]: any } = this.includeDefaultKeys ? {
 			// set default key values
-			id: (new SchemaId()).value,
+			id: (new SchemaId()).defaultValue,
 			createdDate: nowDate,
 			lastUpdatedDate: nowDate,
 		} : {};
@@ -195,13 +228,12 @@ export class Schema<T extends SchemaDefaultValues> implements Schema<T> {
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey) && !this.defaultKeys.includes(mapKey)) {
 				const val = this.#obj[mapKey];
-				
 				switch (true) {
 					case val.type instanceof Schema:
 						obj[mapKey] = (val.type as Schema<any>).toValue();
 						break;
 					case val.type === SchemaId:
-						obj[mapKey] = (new SchemaId()).value;
+						obj[mapKey] = (new SchemaId()).defaultValue;
 						break;
 					case val.type === Date:
 						obj[mapKey] = val.defaultValue instanceof Date ? val.defaultValue : nowDate;

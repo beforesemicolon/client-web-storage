@@ -1,5 +1,5 @@
 import {Schema} from "../Schema";
-import {SchemaId} from "../SchemaId";
+import {SchemaId} from "../CustomTypes/SchemaId";
 
 export const isSupportedTypeValue = (value: any): boolean => {
 	return value === null || [
@@ -21,5 +21,8 @@ export const isSupportedTypeValue = (value: any): boolean => {
 		Uint8ClampedArray,
 		Uint16Array,
 		Uint32Array,
-	].some(type => value instanceof type || typeof value === type.name.toLowerCase())
+		Object
+	].some(type => {
+		return value instanceof type || typeof value === type.name.toLowerCase()
+	})
 }
