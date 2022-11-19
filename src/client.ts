@@ -8,18 +8,6 @@ import {ClientStore} from './ClientStore';
 // @ts-ignore
 if (window) {
 	// @ts-ignore
-	window.Schema = Schema;
-	// @ts-ignore
-	window.SchemaValue = SchemaValue;
-	// @ts-ignore
-	window.SchemaId = SchemaId;
-	// @ts-ignore
-	window.ArrayOf = ArrayOf;
-	// @ts-ignore
-	window.OneOf = OneOf;
-	// @ts-ignore
-	window.ClientStore = ClientStore;
-	// @ts-ignore
 	window.CWS = {
 		Schema,
 		SchemaValue,
