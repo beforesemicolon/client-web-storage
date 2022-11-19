@@ -29,9 +29,7 @@ export class Schema<T> implements Schema<T> {
 			for (let objKey in obj) {
 				if (obj.hasOwnProperty(objKey)) {
 					if (obj[objKey] instanceof SchemaValue) {
-						if (!this.#defaultKeys.includes(objKey)) {
-							this.#obj[objKey] = obj[objKey];
-						}
+						this.#obj[objKey] = obj[objKey];
 					} else {
 						throw new Error(`Field "${objKey}" is not a SchemaValue`)
 					}
@@ -226,7 +224,7 @@ export class Schema<T> implements Schema<T> {
 		} : {};
 		
 		for (let mapKey in this.#obj) {
-			if (this.#obj.hasOwnProperty(mapKey) && !this.defaultKeys.includes(mapKey)) {
+			if (this.#obj.hasOwnProperty(mapKey)) {
 				const val = this.#obj[mapKey];
 				switch (true) {
 					case val.type instanceof Schema:
