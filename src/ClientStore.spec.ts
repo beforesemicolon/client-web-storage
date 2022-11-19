@@ -397,6 +397,8 @@ describe('ClientStore', () => {
 		
 		expect(todoStore.size).toBe(0);
 		
+		onChange.mockClear()
+		
 		await todoStore.loadItems([
 			{name: "Go Shopping", user},
 			{name: "Go To Gym", user}
