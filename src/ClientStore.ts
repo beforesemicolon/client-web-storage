@@ -1,6 +1,7 @@
 import localforage, {LOCALSTORAGE, WEBSQL, INDEXEDDB} from 'localforage';
 import {Schema} from "./Schema";
 import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
+import {SchemaDefaultValues} from "./types";
 
 localforage.defineDriver(MemoryStore());
 
@@ -11,7 +12,7 @@ const defaultConfig = {
 	appName: "App",
 }
 
-export class ClientStore<T extends Schema.DefaultValue> {
+export class ClientStore<T extends SchemaDefaultValues> {
 	#store: LocalForage;
 	#config: ClientStore.Config;
 	#storeName: string;
@@ -75,10 +76,6 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		return this.#size;
 	}
 	
-	#broadcast(eventType: ClientStore.EventType, data: any) {
-		this.#subscribers.forEach(sub => sub(eventType, data))
-	}
-	
 	/**
 	 * subscribe to change in the store and react to them
 	 * @param sub
@@ -112,12 +109,16 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 * update or create items in bulk
 	 * @param items
 	 */
-	async loadItems(items: Array<{}> = []): Promise<Array<T>> {
+	async loadItems(items: Array<Partial<T>> = []): Promise<Array<T> | null> {
 		if (items.length) {
 			try {
-				const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.LOADED, items);
+				const result = await this.#beforeChangeHandler(ClientStore.EventType.LOADED, items);
 				
-				if (shouldChange === true) {
+				if (result === true || Array.isArray(result)) {
+					if (Array.isArray(result)) {
+					    items = result
+					}
+					
 					const newItems = new Map();
 					
 					for (let item of items) {
@@ -151,7 +152,6 @@ export class ClientStore<T extends Schema.DefaultValue> {
 					
 					this.#size = await this.#store.length();
 					this.#broadcast(ClientStore.EventType.LOADED, itemValues);
-
 					return itemValues
 				} else {
 					this.#broadcast(ClientStore.EventType.ABORTED, {
@@ -165,8 +165,12 @@ export class ClientStore<T extends Schema.DefaultValue> {
 					error,
 					data: items
 				});
+				
+				return null;
 			}
 		}
+		
+		this.#broadcast(ClientStore.EventType.LOADED, []);
 		
 		return [];
 	}
@@ -177,8 +181,14 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 */
 	async createItem(value: Partial<T>): Promise<T | null> {
 		const invalidFields = this.#schema.getInvalidSchemaDataFields(value);
-
-		if (!invalidFields.length) {
+		
+		if (invalidFields.length) {
+			this.#broadcast(ClientStore.EventType.ERROR, {
+				action: ClientStore.EventType.CREATED,
+				error: new Error(`Failed to create item. Field(s) "${invalidFields.join(', ')}" do not match the schema: ${this.#schema}`),
+				data: value
+			});
+		} else {
 			const newItem = this.#schema.toValue();
 			
 			for (const valueKey in value) {
@@ -189,12 +199,16 @@ export class ClientStore<T extends Schema.DefaultValue> {
 			}
 			
 			try {
-				const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.CREATED, newItem);
+				const result = this.#handleItemBeforeChangeResult(
+					await this.#beforeChangeHandler(ClientStore.EventType.CREATED, newItem) as T,
+					newItem
+				);
 				
-				if (shouldChange === true) {
+				if (result) {
 					await this.#store.setItem(`${newItem.id}`, newItem);
 					this.#size = await this.#store.length();
 					this.#broadcast(ClientStore.EventType.CREATED, newItem);
+					
 					return newItem;
 				} else {
 					this.#broadcast(ClientStore.EventType.ABORTED, {
@@ -210,12 +224,9 @@ export class ClientStore<T extends Schema.DefaultValue> {
 					data: value
 				});
 			}
-			
-			
-			return null;
 		}
 		
-		throw new Error(`Failed to create item. Field(s) "${invalidFields.join(', ')}" do not match the schema: ${this.#schema}`)
+		return null;
 	}
 	
 	/**
@@ -224,27 +235,31 @@ export class ClientStore<T extends Schema.DefaultValue> {
 	 * @param data
 	 */
 	async updateItem(id: T['id'], data: Partial<T>): Promise<T | null> {
-		for (let dataKey in data) {
-			if (data.hasOwnProperty(dataKey) && !this.#schema.defaultKeys.includes(dataKey) && !this.#schema.isValidFieldValue(dataKey, data[dataKey])) {
-				throw new Error(`Failed to update item "${id}". Key "${dataKey}" is unknown or has invalid value type: ${this.#schema.getField(dataKey)}`)
-			}
-		}
-		
-		const item: any = await this.getItem(id);
-		const updatedItem = {
-			...item,
-			...data,
-			createdDate: item.createdDate,
-			lastUpdatedDate: new Date(),
-			id: item.id
-		};
-		
 		try {
-			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.UPDATED, updatedItem);
+			for (let dataKey in data) {
+				if (data.hasOwnProperty(dataKey) && !this.#schema.defaultKeys.includes(dataKey) && !this.#schema.isValidFieldValue(dataKey, data[dataKey])) {
+					throw new Error(`Failed to update item "${id}". Key "${dataKey}" is unknown or has invalid value type: ${this.#schema.getField(dataKey)}`)
+				}
+			}
 			
-			if (shouldChange === true) {
+			const item: any = await this.getItem(id);
+			const updatedItem = {
+				...item,
+				...data,
+				createdDate: item.createdDate,
+				lastUpdatedDate: new Date(),
+				id: item.id
+			};
+			
+			const result = this.#handleItemBeforeChangeResult(
+				await this.#beforeChangeHandler(ClientStore.EventType.UPDATED, updatedItem) as T,
+				updatedItem
+			);
+			
+			if (result) {
 				await this.#store.setItem(`${item.id}`, updatedItem);
 				this.#broadcast(ClientStore.EventType.UPDATED, updatedItem);
+
 				return updatedItem;
 			} else {
 				this.#broadcast(ClientStore.EventType.ABORTED, {
@@ -371,6 +386,29 @@ export class ClientStore<T extends Schema.DefaultValue> {
 		
 		return items;
 	}
+	
+	#broadcast(eventType: ClientStore.EventType, data: any) {
+		this.#subscribers.forEach(sub => sub(eventType, data))
+	}
+	
+	#handleItemBeforeChangeResult(result: Partial<T> | boolean, item: T) {
+		const resultIsObj = `${result}` === "[object Object]";
+		
+		if (resultIsObj || result === true) {
+			if (resultIsObj) {
+				for (const valueKey in (result as T)) {
+					if (result.hasOwnProperty(valueKey)) {
+						// @ts-ignore
+						item[valueKey] = result[valueKey]
+					}
+				}
+			}
+			
+			return item;
+		}
+		
+		return null;
+	}
 }
 
 export namespace ClientStore {
@@ -379,9 +417,10 @@ export namespace ClientStore {
 	
 	export type UnSubscriber = () => void;
 	
-	type BeforeChangeHandlerData<T extends Schema.DefaultValue> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
+	type BeforeChangeHandlerData<T extends SchemaDefaultValues> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
+	type BeforeChangeHandlerReturn<T extends SchemaDefaultValues> = boolean | Partial<T> | Array<Partial<T>>
 	
-	export type BeforeChangeHandler<T extends Schema.DefaultValue> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<boolean> | boolean;
+	export type BeforeChangeHandler<T extends SchemaDefaultValues> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<BeforeChangeHandlerReturn<T>> | BeforeChangeHandlerReturn<T>;
 	
 	export interface Config {
 		appName?: string;

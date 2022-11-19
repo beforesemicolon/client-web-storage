@@ -1,77 +1,15 @@
 import {isNil} from "./utils/is-nil";
-import {generateUUID} from "./utils/generate-uuid";
 import {isEmptyString} from "./utils/is-empty-string";
+import {isSupportedTypeValue} from "./utils/is-supported-type-value";
+import {SchemaValue} from "./SchemaValue";
+import {isSameValueType} from "./utils/is-same-value-type";
+import {SchemaId} from "./CustomTypes/SchemaId";
+import {SchemaDefaultValues, SchemaJSON, SchemaValueMap, SchemaValueConstructorType} from "./types";
+import {CustomType} from "./CustomTypes/CustomType";
 
-export class SchemaId {
-	value = (() => {
-		try {
-			return crypto.randomUUID();
-		} catch (e) {
-			return generateUUID();
-		}
-	})();
-}
-
-const getDefaultValue = (type: Schema.Type) => {
-	switch (type) {
-		case Number:
-			return 0;
-		case Boolean:
-			return false;
-		case String:
-			return "";
-		case Array:
-		case Float32Array:
-		case Float64Array:
-		case Int8Array:
-		case Int16Array:
-		case Int32Array:
-		case Uint8Array:
-		case Uint8ClampedArray:
-		case Uint16Array:
-		case Uint32Array:
-			return new type();
-		case ArrayBuffer:
-			return new type(0);
-		default:
-			return null;
-	}
-}
-
-const isSameValueType = (type: Schema.Type, value: any) => {
-	try {
-		// @ts-ignore
-		return value instanceof type || typeof value === type.name.toLowerCase()
-	} catch (e) {
-		return false
-	}
-}
-
-export class SchemaValue {
-	constructor(public type: Schema.Type | Schema<any>, public required = false, public defaultValue: Schema.ValueType = null) {
-		if (defaultValue !== null && !isSameValueType(type, defaultValue)) {
-			throw new Error(`Default value "${defaultValue.toString()}" does not match type "${type.name}"`);
-		}
-		
-		this.defaultValue = defaultValue ?? getDefaultValue(this.type);
-	}
-	
-	toJSON(): Schema.JSONValue {
-		return {
-			type: this.type instanceof Schema ? this.type.toJSON() : this.type.name,
-			required: this.required,
-			defaultValue: this.defaultValue
-		}
-	}
-	
-	toString() {
-		return JSON.stringify(this.toJSON(), null, 4)
-	}
-}
-
-export class Schema<T extends Schema.DefaultValue> {
+export class Schema<T> implements Schema<T> {
 	#defaultKeys = ["id", "createdDate", "lastUpdatedDate"]
-	#obj: Schema.Map = {
+	#obj: SchemaValueMap = {
 		id: new SchemaValue(SchemaId, false),
 		createdDate: new SchemaValue(Date, false),
 		lastUpdatedDate: new SchemaValue(Date, false),
@@ -79,7 +17,7 @@ export class Schema<T extends Schema.DefaultValue> {
 	#name: string;
 	#includeDefaultKeys = true;
 	
-	constructor(name: string, obj: Schema.Map | null = null, includeDefaultKeys = true) {
+	constructor(name: string, obj: SchemaValueMap | null = null, includeDefaultKeys = true) {
 		this.#name = name;
 		this.#includeDefaultKeys = includeDefaultKeys;
 		
@@ -91,9 +29,7 @@ export class Schema<T extends Schema.DefaultValue> {
 			for (let objKey in obj) {
 				if (obj.hasOwnProperty(objKey)) {
 					if (obj[objKey] instanceof SchemaValue) {
-						if (!this.#defaultKeys.includes(objKey)) {
-							this.#obj[objKey] = obj[objKey];
-						}
+						this.#obj[objKey] = obj[objKey];
 					} else {
 						throw new Error(`Field "${objKey}" is not a SchemaValue`)
 					}
@@ -114,10 +50,10 @@ export class Schema<T extends Schema.DefaultValue> {
 		return this.#defaultKeys;
 	}
 	
-	defineField(name: keyof T, type: Schema.Type, {
+	defineField(name: keyof T, type: SchemaValueConstructorType | Schema<any>, {
 		defaultValue,
 		required
-	}: { defaultValue?: any, required?: boolean } = {defaultValue: null, required: false}) {
+	}: { defaultValue?: any, required?: boolean } = {}) {
 		this.#obj[`${name}`] = new SchemaValue(type, required, defaultValue);
 	}
 	
@@ -178,20 +114,12 @@ export class Schema<T extends Schema.DefaultValue> {
 	}
 	
 	isValidFieldValue(name: string | keyof T, value: any = null): boolean {
-		const val = this.getField(`${name}`) as SchemaValue;
+		const val = this.getField(`${name}`);
 		
 		if (val) {
-			if (value instanceof Array && value.some(v => !isSupportedTypeValue(v))) {
-				return false;
-			}
-			
-			if (val.type instanceof Schema) {
-				return `${value}` === '[object Object]' && val.type.getInvalidSchemaDataFields(value).length === 0;
-			}
-			
 			return val.required
 				? !isNil(value) && (val.type !== String || !isEmptyString(value)) && isSameValueType(val.type, value)
-				: value === null || value === val.defaultValue || isSameValueType(val.type, value);
+				: isSameValueType(val.type, value);
 		}
 		
 		return false;
@@ -205,11 +133,52 @@ export class Schema<T extends Schema.DefaultValue> {
 		for (const valueKey of [...Object.keys(value), ...requiredFields]) {
 			if (!this.defaultKeys.includes(valueKey)) {
 				const schemaVal = this.getField(valueKey as keyof T);
+				const val = value[valueKey];
+				
+				if (/Array<.+>/.test(schemaVal?.type.name ?? '')) {
+					if (!(val instanceof Array)) {
+						invalidFields.add(valueKey);
+						continue;
+					} else {
+						// @ts-ignore
+						const Type = (new (schemaVal.type as any)());
+						
+						if(Type.type instanceof Schema) {
+							val.forEach((v, k) => {
+								if (`${v}` === '[object Object]') {
+									Type.type.getInvalidSchemaDataFields(v).forEach((z: string) => {
+										invalidFields.add(`${valueKey}[${k}].${z}`)
+									})
+								} else {
+									invalidFields.add(`${valueKey}[${k}]`);
+								}
+							})
+							continue;
+						}
+					}
+				}
+				
+				if (/OneOf<.+>/.test(schemaVal?.type.name ?? '')) {
+					// @ts-ignore
+					const Type = (new (schemaVal.type as any)());
+					const schema = Type.type.find((t: any) => t instanceof Schema);
+					
+					if (schema && `${val}` === '[object Object]') {
+						schema.getInvalidSchemaDataFields(val).forEach((k: string) => {
+							invalidFields.add(`${valueKey}.${k}`)
+						})
+					} else {
+						if (!this.isValidFieldValue(valueKey as keyof T, val)) {
+							invalidFields.add(valueKey);
+						}
+					}
+					
+					continue;
+				}
 				
 				if (schemaVal?.type instanceof Schema) {
-					const v = value[valueKey];
-					if (`${v}` === '[object Object]') {
-						schemaVal.type.getInvalidSchemaDataFields(v).map((k: string) => {
+					if (`${val}` === '[object Object]') {
+						schemaVal.type.getInvalidSchemaDataFields(val).forEach((k: string) => {
 							invalidFields.add(`${valueKey}.${k}`)
 						})
 					} else {
@@ -218,7 +187,7 @@ export class Schema<T extends Schema.DefaultValue> {
 					continue;
 				}
 				
-				if (!this.isValidFieldValue(valueKey as keyof T, value[valueKey])) {
+				if (!this.isValidFieldValue(valueKey as keyof T, val)) {
 					invalidFields.add(valueKey);
 				}
 			}
@@ -227,13 +196,12 @@ export class Schema<T extends Schema.DefaultValue> {
 		return Array.from(invalidFields);
 	}
 	
-	toJSON(): Schema.JSON {
-		const json: Schema.JSON = {};
+	toJSON(): SchemaJSON {
+		const json: SchemaJSON = {};
 		
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey)) {
 				const val = this.#obj[mapKey];
-				
 				json[mapKey] = val.toJSON();
 			}
 		}
@@ -250,21 +218,20 @@ export class Schema<T extends Schema.DefaultValue> {
 		
 		const obj: { [k: string]: any } = this.includeDefaultKeys ? {
 			// set default key values
-			id: (new SchemaId()).value,
+			id: (new SchemaId()).defaultValue,
 			createdDate: nowDate,
 			lastUpdatedDate: nowDate,
 		} : {};
 		
 		for (let mapKey in this.#obj) {
-			if (this.#obj.hasOwnProperty(mapKey) && !this.defaultKeys.includes(mapKey)) {
+			if (this.#obj.hasOwnProperty(mapKey)) {
 				const val = this.#obj[mapKey];
-				
 				switch (true) {
 					case val.type instanceof Schema:
 						obj[mapKey] = (val.type as Schema<any>).toValue();
 						break;
 					case val.type === SchemaId:
-						obj[mapKey] = (new SchemaId()).value;
+						obj[mapKey] = (new SchemaId()).defaultValue;
 						break;
 					case val.type === Date:
 						obj[mapKey] = val.defaultValue instanceof Date ? val.defaultValue : nowDate;
@@ -276,102 +243,5 @@ export class Schema<T extends Schema.DefaultValue> {
 		}
 		
 		return obj as T;
-	}
-}
-
-function isSupportedTypeValue(value: any): boolean {
-	return value === null || [
-		Schema,
-		SchemaId,
-		Date,
-		Number,
-		String,
-		Boolean,
-		Array,
-		ArrayBuffer,
-		Blob,
-		Float32Array,
-		Float64Array,
-		Int8Array,
-		Int16Array,
-		Int32Array,
-		Uint8Array,
-		Uint8ClampedArray,
-		Uint16Array,
-		Uint32Array
-	].some(type => value instanceof type || typeof value === type.name.toLowerCase())
-}
-
-export namespace Schema {
-	interface BlobConstructor {
-		prototype: Blob;
-		
-		new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
-	}
-	
-	interface SchemaIdConstructor {
-		prototype: SchemaId;
-		
-		new(): SchemaId;
-	}
-	
-	export type Type =
-		| Schema<any>
-		| SchemaIdConstructor
-		| DateConstructor
-		| NumberConstructor
-		| StringConstructor
-		| BooleanConstructor
-		| ArrayConstructor
-		| ArrayBufferConstructor
-		| BlobConstructor
-		| Float32ArrayConstructor
-		| Float64ArrayConstructor
-		| Int8ArrayConstructor
-		| Int16ArrayConstructor
-		| Int32ArrayConstructor
-		| Uint8ArrayConstructor
-		| Uint8ClampedArrayConstructor
-		| Uint16ArrayConstructor
-		| Uint32ArrayConstructor;
-	
-	export type ValueType = null
-		| Schema<any>
-		| SchemaId
-		| Date
-		| Number
-		| String
-		| Boolean
-		| Array<ValueType>
-		| ArrayBuffer
-		| Blob
-		| Float32Array
-		| Float64Array
-		| Int8Array
-		| Int16Array
-		| Int32Array
-		| Uint8Array
-		| Uint8ClampedArray
-		| Uint16Array
-		| Uint32Array;
-	
-	export interface JSONValue {
-		type: string | JSON;
-		required: boolean;
-		defaultValue: ValueType;
-	}
-	
-	export interface JSON {
-		[k: string]: JSONValue | JSON
-	}
-	
-	export interface Map {
-		[k: string]: SchemaValue
-	}
-	
-	export interface DefaultValue {
-		id?: string;
-		createdDate?: Date;
-		lastUpdatedDate?: Date;
 	}
 }
