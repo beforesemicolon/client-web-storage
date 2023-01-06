@@ -6,26 +6,40 @@ const callBackOrPromise = <T>(value: T, cb?: errCallback | successCallback<T>) =
 	return typeof cb === "function" ? cb(null, value) : Promise.resolve(value);
 }
 
-	export const MEMORY_STORAGE = "Memory"
+export const MEMORY_STORAGE = "Memory";
+
+const maps: Record<string, Map<any, any>> = {};
+
+const getMapKeyFromConfig = (config: LocalForageOptions) => `${config.storeName}-${config.name}`;
 
 export const MemoryStore = (): LocalForageDriver => {
-	const map = new Map();
 	
 	return {
 		_driver: MEMORY_STORAGE,
-		_initStorage() {
-			return map;
+		_initStorage(config) {
+			maps[getMapKeyFromConfig(config)] = new Map();
 		},
 		async clear(cb: errCallback) {
-			callBackOrPromise(map.clear(), cb);
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			map.clear();
+			
+			callBackOrPromise([], cb);
 		},
 		async getItem<T>(id: string, cb?: successCallback<T>) {
-			return callBackOrPromise(map.get(id) ?? null, cb) || null;
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			const item = map.get(id);
+			
+			return callBackOrPromise(item ?? null, cb) || null;
 		},
 		// @ts-ignore
 		async iterate<T, U>(cb: iteratee<T, U>, onErr?: successCallback<U>) {
 			let i = 0;
 			let res: U;
+			
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
 			
 			for (let [key, value] of map.entries()) {
 				res = cb(value, key, i);
@@ -39,19 +53,40 @@ export const MemoryStore = (): LocalForageDriver => {
 			return callBackOrPromise<any>(null, onErr);
 		},
 		async key(key: number, cb?: successCallback<string>) {
-			return callBackOrPromise<string>(Array.from(map.keys())[key], cb) || "";
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			const keys = Array.from(map.keys());
+			
+			return callBackOrPromise(keys[key], cb) || "";
 		},
 		async keys(cb?: successCallback<string[]>) {
-			return callBackOrPromise<string[]>(Array.from(map.keys()), cb) || [];
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			const keys = Array.from(map.keys());
+			
+			return callBackOrPromise(keys, cb) || [];
 		},
 		async length(cb?: successCallback<number>) {
-			return callBackOrPromise<number>(map.size, cb) || 0;
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			
+			return callBackOrPromise(map.size, cb) || 0;
 		},
 		async removeItem(id: string, cb?: successCallback<null>) {
-			return callBackOrPromise<any>(map.delete(id), cb);
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			
+			map.delete(id)
+			
+			return callBackOrPromise<any>(id, cb);
 		},
 		async setItem<T>(id: any, value: any, cb?: successCallback<T>) {
-			return callBackOrPromise<any>(map.set(id, value), cb);
+			// @ts-ignore
+			const map = maps[getMapKeyFromConfig(this._config)];
+			
+			map.set(id, value)
+			
+			return callBackOrPromise<any>(value, cb);
 		},
 	}
 }
