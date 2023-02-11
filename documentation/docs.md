@@ -32,6 +32,15 @@
     - [Validate Data Before Saving](#validate-data-before-saving)
     - [Update Store With API Returned Data](#update-store-with-api-returned-data)
     - [Transform Data Before Saving](#transform-data-before-saving)
+- [Managing App state](#managing-app-state)
+  - [Accessing the State](#accessing-the-state)
+  - [Update the State](#update-the-state)
+  - [Subscribe to App State](#subscribe-to-app-state)
+  - [Intercept App State](#intercept-app-state)
+- [Helpers](#helpers)
+  - [useClientStore](#useclientstore)
+  - [useAppState](#useappstate)
+  - [withClientStore](#withclientstore)
 
 ## Creating a Store
 Think about a store as a document or table in a database. CWS provides a single way to create a store with [ClientStore](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/ClientStore.md) class.
@@ -828,4 +837,148 @@ await todoStore.createItem({
 
 // when no longer needed
 stopInterceptingCreateEvent();
+```
+
+## Managing App state
+The [ClientStore](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/ClientStore.md) is perfect
+to handle data of your application in a list or database style. However, sometime you just need specific application data
+which are not necessarily the data of the users or that come from the server or that needs to be manipulated by your application.
+
+Such data are what we call metadata. They are things which helps you decide how to display the UI or how to behave. They 
+are your application configuration and settings which can be global or specific to a part of your application.
+
+For such data you can't represent them as items in a store. For those you should not use `ClientStore`. That's why
+we have the `AppState` class to handle such things.
+
+```ts
+interface State {
+  theme: "light" | "dark";
+  language: "en" | "pt";
+}
+
+const appState = new AppState<State>("todo", {
+  theme: "light",
+  language: "en",
+});
+```
+
+Above is a simple example on where to store metadata like the `theme` and `language` of the application.
+
+`AppState` inherits all the benefits of the `ClientStore`. It allows you to subscribe and intercept data. It also validates
+the state on every action allowing you to have full control of the state.
+
+### Accessing the state
+
+To access the data you use the `value` property which returns the state at its current value. But the best
+way to be up-to-date with the state is by [subscribing to the store](#subscribe-to-app-state)
+
+```ts
+appState.value; // returns the state
+```
+
+### Update the state
+The `AppState` exposes the `update` method which is the only way to change the state. State fields cannot be removed or added
+after the initialization. You may only update their value. The store will set the defaults as necessary.
+
+```ts
+appState.update({
+  theme: "dark"
+})
+
+appState.update({
+  language: "pt"
+})
+```
+
+### Subscribe to App state
+You may always subscribe to the application state to react to every change.
+
+```ts
+appState.subscribe((state) => {
+  // handle state
+})
+```
+
+### Intercept App state
+Sometimes you need to perform validation or transformation on the state data before they make it in. For that you can
+use the `intercept` method.
+
+The `intercept` method of `AppState` is different from `ClientStore` in a sense that it does not take the event you
+want to subscribe to. You only need to provide the handler and like in the store, you:
+- return new data to override;
+- throw error to cancel action;
+- return null to abort the action in general;
+
+```ts
+appState.intercet((dataUsedToUpdateTheState) => {
+  // handle data
+})
+```
+
+## Helpers
+The `Client-Web-Storage` package exposes various helpers which are intended to help you incorporate the stores into
+you application much easier.
+
+### useClientStore
+React hook that consumes a store and provides the store state.
+
+```ts
+// app.tsx
+
+import {useClientStore} from "client-web-storage/helpers/use-client-store";
+import {todoStore} from "./stores/todo.store";
+
+const App = () => {
+    const {items, processing, error} = useClientStore<Todo>(todoStore);
+		
+    ...
+}
+```
+
+### useAppState
+React hook that consumes the app state and provides the app state data.
+
+```ts
+// app.tsx
+
+import {useAppState} from "client-web-storage/helpers/use-app-state";
+import {appState, State} from "./stores/app.state";
+
+const App = () => {
+    const {state, error} = useAppState<State>(appState);
+		
+    ...
+}
+```
+
+### withClientStore
+A Higher Oder Function which can be used with any UI framework to easily consume the store data and state.
+
+Bellow is an example on how to use it with Angular.
+
+```ts
+// app.component.ts
+
+import {StoreState} from "client-web-storage";
+import {withClientStore, DefaultStoreState} from "client-web-storage/helpers/with-client-store";
+import {todoStore, Todo} from "./stores/todo.store";
+
+@Component({
+  selector: 'app-root',
+})
+export class AppComponent implements OnInit, OnDestroy {
+  $todo: StoreState<Todo> = DefaultStoreState;
+  $unsubscribeFromTodoStore: UnSubscriber;
+
+  ngOnInit() {
+    this.$unsubscribeFromTodoStore = withClientStore<Todo>(todoStore, (data) => {
+      // handle data;
+    });
+  }
+
+  ngOnDestroy() {
+    this.$unsubscribeFromTodoStore();
+  }
+
+}
 ```

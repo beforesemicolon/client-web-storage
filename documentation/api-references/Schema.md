@@ -20,6 +20,25 @@ An object literal with property field which values are `SchemaValue` instance.
 #### Required: FALSE
 #### Default Value: `null`
 
+## Properties
+| Name                 | Description                                                                                         | Type     |
+|----------------------|-----------------------------------------------------------------------------------------------------|----------|
+| `name`               | The name you gave to the schema when initializing it. Will match the store if accessed in the store | `string` |
+
+## Methods
+| Name                         | Description                                                           | Async   | Arguments                                                                                                               | Return        |
+|------------------------------|-----------------------------------------------------------------------|---------|-------------------------------------------------------------------------------------------------------------------------|---------------|
+| `defineField`                | Define a field                                                        | no      | `name: string, type: SchemaValueConstructorType &#124; Schema<T>, options: { defaultValue?: any, required?: boolean }`  | `void`        |
+| `removeField`                | Remove a field definition                                             | no      | `name: string`                                                                                                          | `void`        |
+| `hasField`                   | Check if a field definition exists                                    | no      | `name: string`                                                                                                          | `boolean`     |
+| `getField`                   | Get a single field definition                                         | no      | `name: string`                                                                                                          | `SchemaValue` |
+| `isValidFieldValue`          | Check if a value is valid for a specific field                        | no      | `name: string, value: any`                                                                                              | `boolean`     |
+| `getInvalidSchemaDataFields` | Get a list of all invalid field given a object literal                | no      | `value: Record<string, any>, defaultKeys: Set<string>`                                                                  | `string[]`    |
+| `toJSON`                     | Get a `JSON` representation os the schema                             | no      | `None`                                                                                                                  | `SchemaJSON`  |
+| `toString`                   | Get a `string` representation os the schema                           | no      | `None`                                                                                                                  | `string`      |
+| `toValue`                    | Get an `Object` representation os the schema with default values      | no      | `None`                                                                                                                  | `T`           |
+
+
 ## Errors
 
 ### Field "*" is not a SchemaValue

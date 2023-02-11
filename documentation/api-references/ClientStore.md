@@ -51,6 +51,39 @@ interface Config {
 }
 ```
 
+## Properties
+| Name                 | Description                                                                                                 | Type                                                                |
+|----------------------|-------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|
+| `schema`             | The `Schema` instance used to define the store data                                                         | `Schema`                                                            |
+| `ready`              | Whether the store has initialized and its ready                                                             | `boolean`                                                           |
+| `type`               | How and where the data will be stored `Default: MEMORYSTORAGE`                                              | `LOCALSTORAGE &#124; WEBSQL &#124; INDEXEDDB &#124; MEMORYSTORAGE`  |
+| `name`               | The name you gave to the store when initializing it                                                         | `string`                                                            |
+| `appName`            | The name of the app you provided in configuration. `Default: App`                                           | `string`                                                            |
+| `processing`         | A flag whether the store is currently processing some action                                                | `boolean`                                                           |
+| `processingEvents`   | A list of all events the store is currently processing                                                      | `EventType[]`                                                       |
+| `idKeyName`          | The name of the key in the items used as identifier. `Default: _id`                                         | `string`                                                            |
+| `createdDateKeyName` | The name of the key used to contain the date when the item was created. `Default: _createdDate`             | `string`                                                            |
+| `updatedDateKeyName` | The name of the key used to contain the date when the item was last updated. `Default: __lastUpdatedDate`   | `string`                                                            |
+
+## Methods
+| Name           | Description                                 | Async   | Arguments                                                                     | Return          |
+|----------------|---------------------------------------------|---------|-------------------------------------------------------------------------------|-----------------|
+| `size`         | Get how many items are in the store         | yes     | `None`                                                                        | `number`        |
+| `subscribe`    | Listen to all events of the store           | no      | `subscriber: StoreSubscriber<T>`                                              | `UnSubscriber`  |
+| `on`           | Listen to a specific event                  | no      | `event: EventType.PROCESSING_EVENTS, handler: (event: EventType[]) => void`   | `UnSubscriber`  |
+| `off`          | Stop listen to a specific event             | no      | `event: EventType.PROCESSING_EVENTS, handler: (event: EventType[]) => void`   | `void`          |
+| `beforeChange` | Intercept all actions to the store          | no      | `handler: BeforeChangeHandler<T>`                                             | `UnSubscriber`  |
+| `intercept`    | Intercept a specific action of the store    | no      | `event: EventType, handler: InterceptEventHandler<T>`                         | `UnSubscriber`  |
+| `loadItems`    | Bulk create or update items into the store  | yes     | `dataList: Array<Partial<T>>`                                                 | `Array<T>`      |
+| `createItem`   | Create an item in the store                 | yes     | `data: Partial<T>`                                                            | `T`             |
+| `updateItem`   | Update an existing item in the store        | yes     | `id: string, data: Partial<T>`                                                | `T`             |
+| `getItems`     | Get all items in the store                  | yes     | `None`                                                                        | `T[]`           |
+| `getItem`      | Get a specific item from the store          | yes     | `id: string`                                                                  | `T`             |
+| `removeItem`   | Remove a specific item in the store         | yes     | `id: string`                                                                  | `string`        |
+| `clear`        | Clear all items in the store                | yes     | `None`                                                                        | `string[]`      |
+| `findItem`     | Find a specific item in the store           | yes     | `cb?: (value: T, key: string) => boolean`                                     | `T`             |
+| `findItems`    | Find a group of items in the store          | yes     | `cb?: (value: T, key: string) => boolean`                                     | `T[]`           |
+
 ## Errors
 
 ### ClientStore must have a non-blank name
