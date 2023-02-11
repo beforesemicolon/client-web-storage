@@ -11,10 +11,20 @@ describe('Schema', () => {
 			// @ts-ignore
 			val: Symbol('invalid')
 		})).toThrowError('Field "val" is not a SchemaValue')
+		
+		expect(() => new Schema('sample', {
+			// @ts-ignore
+			fn: Function
+		})).toThrowError('Field "fn" is not a SchemaValue')
+		
+		expect(() => new Schema('sample', {
+			// @ts-ignore
+			fn: new SchemaValue(Function)
+		})).toThrowError('Invalid SchemaValue type provided. Received "Function"')
 	});
 	
 	describe('should handle simple types', () => {
-		interface ToDo extends SchemaDefaultValues {
+		interface ToDo {
 			name: string;
 			description: string;
 			userId: number;
@@ -39,26 +49,11 @@ describe('Schema', () => {
 		});
 		
 		it('should return correct JSON value', () => {
-			expect(todoSchema.toJSON()).toEqual(expect.objectContaining({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
+			expect(todoSchema.toJSON()).toEqual({
 				"description": {
 					"defaultValue": "",
 					"required": false,
 					"type": "String"
-				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
 				},
 				"name": {
 					"defaultValue": "",
@@ -80,15 +75,12 @@ describe('Schema', () => {
 					"required": true,
 					"type": "SchemaId"
 				}
-			}));
+			});
 		});
 		
 		it('should return correct value', () => {
 			expect(todoSchema.toValue()).toEqual({
-				"createdDate": expect.any(Date),
 				"description": "",
-				"id": expect.any(String),
-				"lastUpdatedDate": expect.any(Date),
 				"name": "",
 				"selected": false,
 				"state": "",
@@ -121,20 +113,22 @@ describe('Schema', () => {
 		
 		it('should check for valid field value', () => {
 			todoSchema.defineField("state", Number, {defaultValue: 5});
-			
+
 			expect(todoSchema.isValidFieldValue("state", 120)).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("state", "sample")).toBeFalsy()
 			expect(todoSchema.isValidFieldValue("state")).toBeFalsy()
-			
+
 			expect(todoSchema.isValidFieldValue("name", "sample")).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("name", 120)).toBeFalsy()
 			expect(todoSchema.isValidFieldValue("name")).toBeFalsy()
-			
+
 			expect(todoSchema.isValidFieldValue("selected", true)).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("selected", "sample")).toBeFalsy()
 			expect(todoSchema.isValidFieldValue("selected")).toBeFalsy()
 			
+			expect(todoSchema.isValidFieldValue("userId", SchemaId)).toBeFalsy()
 			expect(todoSchema.isValidFieldValue("userId", new SchemaId())).toBeTruthy()
+			expect(todoSchema.isValidFieldValue("userId", (new SchemaId()).defaultValue)).toBeTruthy()
 			expect(todoSchema.isValidFieldValue("userId", "sample")).toBeFalsy()
 			expect(todoSchema.isValidFieldValue("userId")).toBeFalsy()
 		});
@@ -163,26 +157,11 @@ describe('Schema', () => {
 			})
 			
 			expect(blobSchema.toJSON()).toEqual({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
 				"data": {
 					"defaultValue": null,
 					"required": false,
 					"type": "Blob"
 				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				}
 			})
 			expect(blobSchema.isValidFieldValue("data", blob)).toBeTruthy()
 			expect(blobSchema.isValidFieldValue("data", 12)).toBeFalsy()
@@ -209,26 +188,11 @@ describe('Schema', () => {
 			})
 			
 			expect(arraySchema.toJSON()).toEqual({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
 				"data": {
 					"defaultValue": [],
 					"required": false,
 					"type": "Array"
 				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				}
 			})
 			expect(arraySchema.isValidFieldValue("data", [12, true, new SchemaId()])).toBeTruthy()
 			expect(arraySchema.isValidFieldValue("data", [12, {}, "sample"])).toBeTruthy()
@@ -252,26 +216,11 @@ describe('Schema', () => {
 			})
 
 			expect(arraySchema.toJSON()).toEqual({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
 				"data": {
 					"defaultValue": [],
 					"required": true,
 					"type": "Array<Number>"
 				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				}
 			})
 			expect(arraySchema.isValidFieldValue("data", [12])).toBeTruthy()
 			expect(arraySchema.isValidFieldValue("data", [new Number(99), 33])).toBeTruthy()
@@ -300,7 +249,65 @@ describe('Schema', () => {
 			
 			arraySchema = new Schema("array", {
 				data: new SchemaValue(ArrayOf(userSchema), true)
-			}, false);
+			});
+			
+			expect(arraySchema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": [],
+					"required": true,
+					"type": "Array<Schema<user>>"
+				}
+			})
+			
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [
+					{}
+				]
+			})).toEqual(["data[0].name"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [
+					{
+						name: "john"
+					},
+					12,
+				]
+			})).toEqual(["data[1]"])
+		});
+		
+		it('ArrayOf object literal', () => {
+			let arraySchema = new Schema("array", {
+				data: new SchemaValue(ArrayOf({$name: String}), true)
+			})
+			
+			expect(arraySchema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": [],
+					"required": true,
+					"type": "Array<Schema>"
+				},
+			})
+			expect(arraySchema.isValidFieldValue("data", [12])).toBeFalsy()
+			expect(arraySchema.isValidFieldValue("data", [{name: "john doe"}])).toBeTruthy()
+			expect(arraySchema.isValidFieldValue("data", [{}])).toBeFalsy()
+			expect(arraySchema.getInvalidSchemaDataFields({
+				new: "yes"
+			})).toEqual(["new", "data"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [12, true, {}, {name: "jd"}],
+				obj: "yes"
+			})).toEqual(["data[0]", "data[1]", "data[2].name", "obj"])
+			expect(arraySchema.getInvalidSchemaDataFields({
+				data: [],
+			})).toEqual([])
+			
+			const userSchema = new Schema("user", {
+				name: new SchemaValue(String, true),
+				avatar: new SchemaValue(String),
+			});
+			
+			arraySchema = new Schema("array", {
+				data: new SchemaValue(ArrayOf(userSchema), true)
+			});
 			
 			expect(arraySchema.toJSON()).toEqual({
 				"data": {
@@ -332,26 +339,11 @@ describe('Schema', () => {
 			
 			expect(oneOfSchema.toJSON()).toBeDefined()
 			expect(oneOfSchema.toJSON()).toEqual({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
 				"data": {
 					"defaultValue": null,
 					"required": false,
-					"type": "OneOf<Number, String>"
+					"type": "Number | String"
 				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				}
 			})
 			expect(oneOfSchema.isValidFieldValue("data", [12])).toBeFalsy()
 			expect(oneOfSchema.isValidFieldValue("data", new Number(99))).toBeTruthy()
@@ -379,16 +371,81 @@ describe('Schema', () => {
 			
 			oneOfSchema = new Schema("array", {
 				data: new SchemaValue(OneOf(userSchema, String), true)
-			}, false);
+			});
 			
 			expect(oneOfSchema.toJSON()).toEqual({
 				"data": {
 					"defaultValue": null,
 					"required": true,
-					"type": "OneOf<Schema<user>, String>"
+					"type": "Schema<user> | String"
 				}
 			})
 			
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: 23
+			})).toEqual(["data"])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: {}
+			})).toEqual(["data.name"])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: "sample"
+			})).toEqual([])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: {
+					name: "john"
+				}
+			})).toEqual([])
+		});
+		
+		it('OneOf object literal', () => {
+			let oneOfSchema = new Schema("array", {
+				data: new SchemaValue(OneOf({$name: String}, String))
+			})
+			
+			expect(oneOfSchema.toJSON()).toBeDefined()
+			expect(oneOfSchema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Schema | String"
+				},
+			})
+			expect(oneOfSchema.isValidFieldValue("data", [12])).toBeFalsy()
+			expect(oneOfSchema.isValidFieldValue("data", "john doe")).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", {name: "john doe"})).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", new String("sample"))).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", "sample")).toBeTruthy()
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				new: "yes"
+			})).toEqual(["new"])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: 12,
+				obj: "yes"
+			})).toEqual(["data", "obj"])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: "sample",
+			})).toEqual([])
+			expect(oneOfSchema.getInvalidSchemaDataFields({
+				data: null,
+			})).toEqual(["data"])
+
+			const userSchema = new Schema("user", {
+				name: new SchemaValue(String, true),
+				avatar: new SchemaValue(String),
+			});
+
+			oneOfSchema = new Schema("array", {
+				data: new SchemaValue(OneOf(userSchema, String), true)
+			});
+
+			expect(oneOfSchema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": null,
+					"required": true,
+					"type": "Schema<user> | String"
+				}
+			})
+
 			expect(oneOfSchema.getInvalidSchemaDataFields({
 				data: 23
 			})).toEqual(["data"])
@@ -415,26 +472,11 @@ describe('Schema', () => {
 			})
 			
 			expect(arraySchema.toJSON()).toEqual({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
 				"data": {
 					"defaultValue": null,
 					"required": false,
 					"type": "ArrayBuffer"
 				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				}
 			})
 			expect(arraySchema.isValidFieldValue("data", new ArrayBuffer(10))).toBeTruthy()
 			expect(arraySchema.isValidFieldValue("data", [12, {}, "sample"])).toBeFalsy()
@@ -464,26 +506,11 @@ describe('Schema', () => {
 			})
 			
 			expect(in32ArraySchema.toJSON()).toEqual({
-				"createdDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				},
 				"data": {
 					"defaultValue": expect.any(Int32Array),
 					"required": false,
 					"type": "Int32Array"
 				},
-				"id": {
-					"defaultValue": expect.any(String),
-					"required": false,
-					"type": "SchemaId"
-				},
-				"lastUpdatedDate": {
-					"defaultValue": null,
-					"required": false,
-					"type": "Date"
-				}
 			})
 			expect(in32ArraySchema.isValidFieldValue("data", in32Array)).toBeTruthy()
 			expect(in32ArraySchema.isValidFieldValue("data", "sample")).toBeFalsy()
@@ -512,7 +539,7 @@ describe('Schema', () => {
 		let parkingTicketSchema: Schema<ParkingTicket>;
 		
 		beforeEach(() => {
-			parkingTicketSchema = new Schema("parkingTicket", null, false);
+			parkingTicketSchema = new Schema("parkingTicket", null);
 			
 			parkingTicketSchema.defineField("id", SchemaId, {required: true});
 			parkingTicketSchema.defineField("createdDate", Date);
@@ -580,25 +607,10 @@ describe('Schema', () => {
 		});
 
 		expect(todoSchema.toJSON()).toEqual({
-			"createdDate": {
-				"defaultValue": null,
-				"required": false,
-				"type": "Date"
-			},
 			"description": {
 				"defaultValue": "",
 				"required": false,
 				"type": "String"
-			},
-			"id": {
-				"defaultValue": expect.any(String),
-				"required": false,
-				"type": "SchemaId"
-			},
-			"lastUpdatedDate": {
-				"defaultValue": null,
-				"required": false,
-				"type": "Date"
 			},
 			"name": {
 				"defaultValue": "",
@@ -618,9 +630,6 @@ describe('Schema', () => {
 			"user": {
 				"defaultValue": {
 					"avatar": "",
-					"createdDate": null,
-					"id": expect.any(String),
-					"lastUpdatedDate": null,
 					"name": ""
 				},
 				"required": true,
@@ -628,19 +637,13 @@ describe('Schema', () => {
 			}
 		})
 		expect(todoSchema.toValue()).toEqual({
-			"createdDate": expect.any(Date),
 			"description": "",
-			"id": expect.any(String),
-			"lastUpdatedDate": expect.any(Date),
 			"name": "",
 			"selected": false,
 			"state": "",
 			"user": {
 				"avatar": "",
-				"createdDate": expect.any(Date),
-				"id": expect.any(String),
-				"lastUpdatedDate": expect.any(Date),
-				"name": "",
+				"name": ""
 			}
 		})
 		expect(todoSchema.getInvalidSchemaDataFields({})).toEqual(["name", "user"])
@@ -676,9 +679,6 @@ describe('Schema', () => {
 		expect(todoSchema.getField("user")?.toJSON()).toEqual({
 			"defaultValue": {
 				"avatar": "",
-				"createdDate": null,
-				"id": expect.any(String),
-				"lastUpdatedDate": null,
 				"name": ""
 			},
 			"required": true,
@@ -686,7 +686,7 @@ describe('Schema', () => {
 		});
 	});
 	
-	it('should handle all', () => {
+	it('should handle checking value against schema', () => {
 		const userSchema = new Schema("user", {
 			name: new SchemaValue(String, true),
 			avatar: new SchemaValue(String),
@@ -715,30 +715,15 @@ describe('Schema', () => {
 				"required": false,
 				"type": "Number"
 			},
-			"createdDate": {
-				"defaultValue": null,
-				"required": false,
-				"type": "Date"
-			},
 			"description": {
 				"defaultValue": "",
 				"required": false,
 				"type": "String"
 			},
-			"id": {
-				"defaultValue": expect.any(String),
-				"required": false,
-				"type": "SchemaId"
-			},
 			"image": {
 				"defaultValue": null,
 				"required": false,
 				"type": "Blob"
-			},
-			"lastUpdatedDate": {
-				"defaultValue": null,
-				"required": false,
-				"type": "Date"
 			},
 			"name": {
 				"defaultValue": "",
@@ -758,14 +743,11 @@ describe('Schema', () => {
 			"total": {
 				"defaultValue": null,
 				"required": false,
-				"type": "OneOf<String, Number>"
+				"type": "String | Number"
 			},
 			"user": {
 				"defaultValue": {
 					"avatar": "",
-					"createdDate": null,
-					"id": expect.any(String),
-					"lastUpdatedDate": null,
 					"name": ""
 				},
 				"required": true,
@@ -777,6 +759,61 @@ describe('Schema', () => {
 				"type": "Array<Number>"
 			}
 		})
+		expect(itemSchema.toString()).toBe('{\n' +
+			'    "name": {\n' +
+			'        "type": "String",\n' +
+			'        "required": true,\n' +
+			'        "defaultValue": ""\n' +
+			'    },\n' +
+			'    "description": {\n' +
+			'        "type": "String",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": ""\n' +
+			'    },\n' +
+			'    "user": {\n' +
+			'        "type": "Schema<user>",\n' +
+			'        "required": true,\n' +
+			'        "defaultValue": {\n' +
+			'            "name": "",\n' +
+			'            "avatar": ""\n' +
+			'        }\n' +
+			'    },\n' +
+			'    "selected": {\n' +
+			'        "type": "Boolean",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": false\n' +
+			'    },\n' +
+			'    "count": {\n' +
+			'        "type": "Number",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": 0\n' +
+			'    },\n' +
+			'    "total": {\n' +
+			'        "type": "String | Number",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": null\n' +
+			'    },\n' +
+			'    "realTotal": {\n' +
+			'        "type": "Int32Array",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": {}\n' +
+			'    },\n' +
+			'    "values": {\n' +
+			'        "type": "Array<Number>",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": []\n' +
+			'    },\n' +
+			'    "image": {\n' +
+			'        "type": "Blob",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": null\n' +
+			'    },\n' +
+			'    "buffer": {\n' +
+			'        "type": "ArrayBuffer",\n' +
+			'        "required": false,\n' +
+			'        "defaultValue": null\n' +
+			'    }\n' +
+			'}')
 		expect(itemSchema.getInvalidSchemaDataFields({
 			name: "my todo",
 			user: {

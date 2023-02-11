@@ -11,7 +11,7 @@
 *.sw?
 src
 tsconfig.json
-docs
+documentation
 **.tgz
 **/*.spec.ts
 coverage

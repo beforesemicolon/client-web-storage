@@ -1,8 +1,9 @@
 {
   "name": "client-web-storage",
-  "description": "Web browser (client) storage interface for IndexedDB, WebSQL, LocalStorage, and in memory data with Schema validation.",
-  "version": "1.5.1",
-  "main": "dist/",
+  "description": "Powerful Web Application Data Storage and State Management Solution.",
+  "version": "1.6.0",
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "repository": {
     "url": "https://github.com/beforesemicolon/client-web-storage",
     "type": "git"
@@ -19,27 +20,31 @@
   "author": "Elson Correia",
   "license": "MIT",
   "scripts": {
-    "build:client": "esbuild src/client.ts --bundle --minify --keep-names --sourcemap --target=es2020 --outfile=dist/client-web-storage.min.js",
-    "build:client-local": "esbuild src/client.ts --bundle --target=es2020 --outfile=dist/client-web-storage.min.js",
-    "build": "tsc --noEmit && rm -rf dist && npm run build:client && tsc",
-    "build:local": "tsc --noEmit && rm -rf dist && npm run build:client-local && tsc",
+    "build": "ts-node scripts/build.ts",
     "local": "nodemon --watch src -e ts --exec 'npm run build:local && npm pack'",
     "test": "jest --coverage",
     "test:watch": "jest --watch"
   },
   "devDependencies": {
+    "@types/core-js": "^2.5.5",
     "@types/jest": "^27.4.1",
     "@types/jsdom": "^16.2.14",
     "@types/localforage": "0.0.34",
+    "@types/node": "^18.11.18",
+    "@types/react": "^18.0.27",
     "esbuild": "^0.14.28",
+    "fake-indexeddb": "^4.0.1",
     "jest": "^27.5.1",
     "jest-canvas-mock": "^2.3.1",
     "jest-environment-jsdom": "^27.5.1",
     "nodemon": "^2.0.15",
+    "react": "*",
     "ts-jest": "^27.1.4",
-    "typescript": "^4.6.3"
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.4"
   },
   "dependencies": {
+    "core-js": "^3.27.1",
     "localforage": "^1.10.0"
   }
 }

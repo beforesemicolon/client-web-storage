@@ -1,33 +1,63 @@
-import localforage, {LOCALSTORAGE, WEBSQL, INDEXEDDB} from 'localforage';
+import 'core-js/actual/structured-clone';
+import localforage from 'localforage';
 import {Schema} from "./Schema";
-import {MEMORY_STORAGE, MemoryStore} from "./MemoryStore";
-import {SchemaDefaultValues} from "./types";
+import {MemoryStore} from "./MemoryStore";
+import {
+	ActionEventData,
+	BeforeChangeHandler,
+	Config,
+	EventData,
+	EventHandler,
+	EventType,
+	InterceptEventHandler,
+	SchemaDefaultValues,
+	SchemaObjectLiteral,
+	StoreSubscriber,
+	UnSubscriber
+} from "./types";
+import {defaultConfig} from "./default-config";
+import {SchemaId} from "./CustomTypes/SchemaId";
+import {objectToSchema} from "./utils/object-to-schema";
+import {errorMessages} from "./utils/error-messages";
+import {isValidObjectLiteral} from "./utils/is-valid-object-literal";
+import {isObjectLiteral} from "./utils/is-object-literal";
 
 localforage.defineDriver(MemoryStore());
 
-const defaultConfig = {
-	version: 1,
-	type: [INDEXEDDB, WEBSQL, LOCALSTORAGE, MEMORY_STORAGE],
-	description: "",
-	appName: "App",
-}
+const deepClone = structuredClone;
 
-export class ClientStore<T extends SchemaDefaultValues> {
+export class ClientStore<T> {
 	#store: LocalForage;
-	#config: ClientStore.Config;
+	#config: Config;
 	#storeName: string;
 	#schema: Schema<T>;
-	#subscribers: ClientStore.StoreSubscriber[] = [];
-	#beforeChangeHandler: ClientStore.BeforeChangeHandler<T> = () => true;
+	#subscribers: Set<StoreSubscriber<T>> = new Set();
+	#eventHandlers: Map<EventType, Set<EventHandler<T>>> = new Map(Object
+		.values(EventType)
+		.map((event) => [event as EventType, new Set()])
+	);
+	#interceptEventHandlers: Map<EventType, InterceptEventHandler<T> | null> = new Map(Object
+		.values(EventType)
+		.map((event) => [event as EventType, null])
+	);
+	#beforeChangeHandler: BeforeChangeHandler<T> | null = null;
 	#ready = false;
-	#size = 0;
+	#processes: Set<string> = new Set();
 	
-	constructor(storeName: string, schema: Schema<T>, config: ClientStore.Config = defaultConfig) {
+	constructor(storeName: string, schema: Schema<T> | SchemaObjectLiteral, config: Config = defaultConfig) {
 		this.#storeName = storeName;
 		this.#config = {...defaultConfig, ...config};
 		
+		if (!`${storeName}`.trim().length) {
+			throw new Error(errorMessages.blankStoreName())
+		}
+		
 		if (!(schema instanceof Schema)) {
-			throw new Error('Missing or unknown "Schema"')
+			if (`${schema}` === '[object Object]') {
+				schema = objectToSchema(storeName, schema);
+			} else {
+				throw new Error(errorMessages.invalidSchema())
+			}
 		}
 		
 		const name = this.#config.appName || "App";
@@ -42,10 +72,13 @@ export class ClientStore<T extends SchemaDefaultValues> {
 		});
 		
 		this.#store.ready(() => {
-			console.info(`[Info] ClientStore "${storeName}" successfully created`);
 			this.#ready = true;
-			this.#broadcast(ClientStore.EventType.READY, true);
+			this.#broadcast(EventType.READY, true);
 		})
+	}
+	
+	get schema() {
+		return this.#schema;
 	}
 	
 	/**
@@ -59,35 +92,110 @@ export class ClientStore<T extends SchemaDefaultValues> {
 	 * the type of the store
 	 */
 	get type() {
-		return this.#store.driver();
+		return this.#config.type;
 	}
 	
 	/**
 	 * name of the store
 	 */
 	get name() {
-		return `${this.#config.appName}-${this.#storeName}`;
+		return this.#storeName;
+	}
+	
+	/**
+	 * name of the app store belongs to
+	 */
+	get appName() {
+		return this.#config.appName;
+	}
+	
+	get processing() {
+		return this.#processes.size > 0;
+	}
+	
+	/**
+	 * name of the item key used to id the items
+	 */
+	get idKeyName() {
+		return (this.#config.idKeyName || defaultConfig.idKeyName) as keyof T;
+	}
+	
+	/**
+	 * name of the item key used track time the item was created
+	 */
+	get createdDateKeyName() {
+		return (this.#config.createdDateKeyName || defaultConfig.createdDateKeyName) as keyof T;
+	}
+	
+	/**
+	 * name of the item key used track time the item was last updated
+	 */
+	get updatedDateKeyName() {
+		return (this.#config.updatedDateKeyName || defaultConfig.updatedDateKeyName) as keyof T;
+	}
+	
+	get processingEvents(): EventType[] {
+		return Array.from(this.#processes, (event) => event.split('_')[0]) as EventType[];
 	}
 	
 	/**
 	 * the total count of items in the store
 	 */
-	get size() {
-		return this.#size;
+	async size() {
+		return await this.#store.length();
 	}
 	
 	/**
 	 * subscribe to change in the store and react to them
 	 * @param sub
 	 */
-	subscribe(sub: ClientStore.StoreSubscriber): ClientStore.UnSubscriber {
+	subscribe(sub: StoreSubscriber<T>): UnSubscriber {
 		if (typeof sub === 'function') {
-			this.#subscribers.push(sub)
+			this.#subscribers.add(sub)
+			
+			return () => {
+				this.#subscribers.delete(sub)
+			}
 		}
 		
-		return () => {
-			this.#subscribers = this.#subscribers.filter(s => s !== sub)
+		throw new Error(errorMessages.invalidSubHandler(sub));
+	}
+	
+	on(event: EventType.PROCESSING_EVENTS, handler: (event: EventType[]) => void): UnSubscriber
+	on(event: EventType.PROCESSING, handler: (processing: boolean) => void): UnSubscriber
+	on(event: EventType.READY, handler: (ready: boolean) => void): UnSubscriber
+	on(event: EventType.CREATED, handler: (data: T) => void): UnSubscriber
+	on(event: EventType.UPDATED, handler: (data: T) => void): UnSubscriber
+	on(event: EventType.LOADED, handler: (dataList: T[]) => void): UnSubscriber
+	on(event: EventType.REMOVED, handler: (id: string) => void): UnSubscriber
+	on(event: EventType.CLEARED, handler: (ids: string[]) => void): UnSubscriber
+	on(event: EventType.ABORTED, handler: (data: ActionEventData<T>) => void): UnSubscriber
+	on(event: EventType.ERROR, handler: (data: ActionEventData<T>) => void): UnSubscriber
+	on(event: EventType, handler: any): UnSubscriber {
+		if (typeof handler === 'function') {
+			if (this.#eventHandlers.has(event)) {
+				this.#eventHandlers.get(event)?.add(handler);
+				
+				return () => this.off(event, handler);
+			}
+			
+			throw new Error(errorMessages.invalidEventName("ON", event));
 		}
+		
+		throw new Error(errorMessages.invalidEventHandler("ON", event, handler));
+	}
+	
+	off(event: EventType, handler: EventHandler<T>) {
+		if (typeof handler === 'function') {
+			if (this.#eventHandlers.has(event)) {
+				this.#eventHandlers.get(event)?.delete(handler);
+				return;
+			}
+			
+			throw new Error(errorMessages.invalidEventName("OFF", event));
+		}
+		
+		throw new Error(errorMessages.invalidEventHandler("OFF", event, handler));
 	}
 	
 	/**
@@ -95,290 +203,333 @@ export class ClientStore<T extends SchemaDefaultValues> {
 	 * to perform any action before it happens and gets broadcast as event
 	 * @param handler
 	 */
-	beforeChange(handler: ClientStore.BeforeChangeHandler<T>): ClientStore.UnSubscriber {
+	beforeChange(handler: BeforeChangeHandler<T>): UnSubscriber {
 		if (typeof handler === 'function') {
 			this.#beforeChangeHandler = handler;
+		} else {
+			throw new Error(errorMessages.invalidEventHandler("function", "beforeChange", handler));
 		}
 		
 		return () => {
-			this.#beforeChangeHandler = () => true;
+			this.#beforeChangeHandler = null;
 		}
 	}
 	
-	/**
-	 * update or create items in bulk
-	 * @param items
-	 */
-	async loadItems(items: Array<Partial<T>> = []): Promise<Array<T> | null> {
-		if (items.length) {
-			try {
-				const result = await this.#beforeChangeHandler(ClientStore.EventType.LOADED, items);
+	intercept(event: EventType.CREATED, handler: (item: { data: T, id: string }) => Partial<T> | null | void | Promise<Partial<T> | null | void>): UnSubscriber;
+	intercept(event: EventType.UPDATED, handler: (item: { data: T, id: string }) => Partial<T> | null | void | Promise<Partial<T> | null | void>): UnSubscriber;
+	intercept(event: EventType.LOADED, handler: (items: { data: T[], id: null }) => Array<Partial<T>> | null | void | Promise<Array<Partial<T>> | null | void>): UnSubscriber;
+	intercept(event: EventType.REMOVED, handler: (itemId: { data: string, id: string }) => null | void | Promise<null | void>): UnSubscriber;
+	intercept(event: EventType.CLEARED, handler: (itemIds: { data: string[], id: null }) => null | void | Promise<null | void>): UnSubscriber;
+	intercept(event: EventType, handler: any): UnSubscriber {
+		if (typeof handler === 'function') {
+			if (this.#interceptEventHandlers.has(event)) {
+				this.#interceptEventHandlers.set(event, handler);
 				
-				if (result === true || Array.isArray(result)) {
-					if (Array.isArray(result)) {
-					    items = result
+				return () => {
+					this.#interceptEventHandlers.set(event, null);
+				}
+			}
+			
+			throw new Error(errorMessages.invalidEventName("INTERCEPT", event));
+		}
+		
+		throw new Error(errorMessages.invalidEventHandler("INTERCEPT", event, handler));
+	}
+	
+	/**
+	 * updates or creates items in the store from an optionally provided list or a list
+	 * returned by the LOADED interception handler
+	 * @param dataList
+	 * @return Array<item> | null
+	 */
+	async loadItems(dataList: Array<Partial<T>> = []): Promise<Array<Required<T> & SchemaDefaultValues>> {
+		return this.#trackProcess(EventType.LOADED, async () => {
+			try {
+				const newItems = new Map();
+				const {key} = this.#getDefaultKeys();
+				
+				for (let data of dataList) {
+					if (!isValidObjectLiteral(data)) {
+						throw new Error(errorMessages.invalidValueProvided("load", data))
 					}
 					
-					const newItems = new Map();
+					const {item, id} = await this.#mergeExistingItemWithNewData(data)
 					
-					for (let item of items) {
-						let newItem = (await this.getItem((item as T)?.id) ?? this.#schema.toValue()) as Partial<T>;
-
-						for (const itemKey in newItem) {
-							if (newItem.hasOwnProperty(itemKey)) {
-								// @ts-ignore
-								const newValue = item[itemKey];
-								
-								if (newValue) {
-									newItem[itemKey] = newValue;
-								}
-							}
-						}
-						
-						const invalidFields = this.#schema.getInvalidSchemaDataFields(newItem);
-						
-						if (!invalidFields.length) {
-							newItems.set(newItem.id, newItem);
-						} else {
-							throw new Error(`Missing or invalid field types: [${invalidFields.join(', ')}] in "${JSON.stringify(item, null, 2)}".`)
-						}
-					}
-					
-					const itemValues = Array.from(newItems.values());
-					
-					await Promise.all(
-						itemValues.map(newItem => this.#store.setItem(`${newItem.id}`, newItem))
+					this.#validateData(
+						item as T,
+						(invalidFields) => errorMessages.missingOrInvalidFields(invalidFields, invalidFields.map(name => this.schema.getField(name) ?? undefined))
 					);
 					
-					this.#size = await this.#store.length();
-					this.#broadcast(ClientStore.EventType.LOADED, itemValues);
-					return itemValues
-				} else {
-					this.#broadcast(ClientStore.EventType.ABORTED, {
-						action: ClientStore.EventType.LOADED,
-						data: items
-					});
+					newItems.set(id, item);
 				}
-			} catch(error) {
-				this.#broadcast(ClientStore.EventType.ERROR, {
-					action: ClientStore.EventType.LOADED,
-					error,
-					data: items
-				});
 				
-				return null;
-			}
-		}
-		
-		this.#broadcast(ClientStore.EventType.LOADED, []);
-		
-		return [];
-	}
-	
-	/**
-	 * create an item in the store
-	 * @param value
-	 */
-	async createItem(value: Partial<T>): Promise<T | null> {
-		const invalidFields = this.#schema.getInvalidSchemaDataFields(value);
-		
-		if (invalidFields.length) {
-			this.#broadcast(ClientStore.EventType.ERROR, {
-				action: ClientStore.EventType.CREATED,
-				error: new Error(`Failed to create item. Field(s) "${invalidFields.join(', ')}" do not match the schema: ${this.#schema}`),
-				data: value
-			});
-		} else {
-			const newItem = this.#schema.toValue();
-			
-			for (const valueKey in value) {
-				if (value.hasOwnProperty(valueKey) && !this.#schema.defaultKeys.includes(valueKey)) {
-					// @ts-ignore
-					newItem[valueKey] = value[valueKey]
+				let result = await this.#getWithResult(EventType.LOADED, Array.from(newItems.values()));
+				
+				if (result === null) {
+					this.#broadcast(EventType.ABORTED, {
+						action: EventType.LOADED,
+						data: dataList
+					});
+					
+					return null;
 				}
-			}
-			
-			try {
-				const result = this.#handleItemBeforeChangeResult(
-					await this.#beforeChangeHandler(ClientStore.EventType.CREATED, newItem) as T,
-					newItem
+				
+				if (Array.isArray(result) && result.length) {
+					
+					for (let itemValue of result) {
+						if (!isObjectLiteral(itemValue)) {
+							throw new Error(errorMessages.invalidValueInterceptProvided("load", itemValue))
+						}
+						
+						let itemId = itemValue[key];
+						
+						if (newItems.get(itemValue[key])) {
+							newItems.set(itemValue[key], deepClone({...newItems.get(itemValue[key]), ...itemValue}))
+						} else {
+							const {item, id} = await this.#mergeExistingItemWithNewData(itemValue);
+							newItems.set(id, item);
+							itemId = id;
+						}
+
+						this.#validateData(
+							newItems.get(itemId),
+							(invalidFields) => errorMessages.missingOrInvalidFields(invalidFields, invalidFields.map(name => this.schema.getField(name) ?? undefined))
+						);
+					}
+				}
+				
+				const setItems = await Promise.all(
+					Array.from(newItems.values()).map(newItem => this.#store.setItem(`${newItem[key]}`, newItem))
 				);
 				
-				if (result) {
-					await this.#store.setItem(`${newItem.id}`, newItem);
-					this.#size = await this.#store.length();
-					this.#broadcast(ClientStore.EventType.CREATED, newItem);
-					
-					return newItem;
-				} else {
-					this.#broadcast(ClientStore.EventType.ABORTED, {
-						action: ClientStore.EventType.CREATED,
-						data: value
-					});
-				}
-			} catch (error) {
-				console.error(`Failed to create item "${JSON.stringify(value, null, 2)}"`, error);
-				this.#broadcast(ClientStore.EventType.ERROR, {
-					action: ClientStore.EventType.CREATED,
-					error,
-					data: value
-				});
+				this.#broadcast(EventType.LOADED, setItems);
+				
+				return setItems
+			
+			} catch (error: any) {
+				this.#broadcast(EventType.ERROR, this.#createEventData(EventType.LOADED, dataList, null, error));
+				throw error;
 			}
-		}
-		
-		return null;
+		});
 	}
 	
 	/**
-	 * update a single item in the store
+	 * creates an item in the store given a partial item object
+	 * @param data
+	 * @return item | null
+	 */
+	async createItem(data: Partial<T>): Promise<Required<T> & SchemaDefaultValues> {
+		return this.#trackProcess(EventType.CREATED, async () => {
+			try {
+				if (!isValidObjectLiteral(data)) {
+					throw new Error(errorMessages.invalidValueProvided("create", data))
+				}
+				
+				this.#validateData(
+					data,
+					(invalidFields) => errorMessages.missingOrInvalidFields(invalidFields, invalidFields.map(name => this.schema.getField(name) ?? undefined))
+				);
+				
+				let {item, id} = await this.#mergeExistingItemWithNewData(data)
+				
+				const result = await this.#getWithResult(EventType.CREATED, item, id);
+				
+				if (result === null) {
+					this.#broadcast(EventType.ABORTED, {
+						action: EventType.CREATED,
+						data: data
+					});
+					
+					return null;
+				}
+				
+				if (isObjectLiteral(result)) {
+					item = deepClone({...item, ...result});
+					
+					this.#validateData(
+						item,
+						(invalidFields) => errorMessages.missingOrInvalidFields(invalidFields, invalidFields.map(name => this.schema.getField(name) ?? undefined))
+					);
+				}
+				
+				const setItem = await this.#store.setItem(String(id), item);
+				this.#broadcast(EventType.CREATED, setItem);
+				
+				return setItem;
+			} catch (error: any) {
+				this.#broadcast(EventType.ERROR, this.#createEventData(EventType.CREATED, data, null, error));
+				throw error;
+			}
+		})
+	}
+	
+	/**
+	 * updates a single item in the store if it exists
 	 * @param id
 	 * @param data
+	 * @return item | null
 	 */
-	async updateItem(id: T['id'], data: Partial<T>): Promise<T | null> {
-		try {
-			for (let dataKey in data) {
-				if (data.hasOwnProperty(dataKey) && !this.#schema.defaultKeys.includes(dataKey) && !this.#schema.isValidFieldValue(dataKey, data[dataKey])) {
-					throw new Error(`Failed to update item "${id}". Key "${dataKey}" is unknown or has invalid value type: ${this.#schema.getField(dataKey)}`)
+	async updateItem(id: string, data: Partial<T>): Promise<Required<T> & SchemaDefaultValues> {
+		return this.#trackProcess(EventType.UPDATED, async () => {
+			try {
+				if (!isValidObjectLiteral(data)) {
+					throw new Error(errorMessages.invalidValueProvided("update", data))
 				}
+				
+				let existingItem = deepClone(await this.getItem(id) as T);
+				
+				if (existingItem) {
+					let {item, id} = await this.#mergeExistingItemWithNewData(data, existingItem);
+					
+					this.#validateData(
+						item,
+						(invalidFields) => errorMessages.missingOrInvalidFields(invalidFields, invalidFields.map(name => this.schema.getField(name) ?? undefined))
+					);
+					
+					const result = await this.#getWithResult(EventType.UPDATED, item, id);
+					
+					if (result === null) {
+						this.#broadcast(EventType.ABORTED, {
+							action: EventType.UPDATED,
+							data
+						});
+						
+						return null;
+					}
+					
+					if (isObjectLiteral(result)) {
+						item = deepClone(result as T);
+						
+						this.#validateData(
+							item,
+							(invalidFields) => errorMessages.missingOrInvalidFields(invalidFields, invalidFields.map(name => this.schema.getField(name) ?? undefined))
+						);
+					}
+					
+					const setItem = await this.#store.setItem(String(id), item);
+					this.#broadcast(EventType.UPDATED, setItem);
+					return setItem;
+				}
+			} catch (error: any) {
+				this.#broadcast(EventType.ERROR, this.#createEventData(EventType.UPDATED, data, id, error));
+				throw error;
 			}
 			
-			const item: any = await this.getItem(id);
-			const updatedItem = {
-				...item,
-				...data,
-				createdDate: item.createdDate,
-				lastUpdatedDate: new Date(),
-				id: item.id
-			};
-			
-			const result = this.#handleItemBeforeChangeResult(
-				await this.#beforeChangeHandler(ClientStore.EventType.UPDATED, updatedItem) as T,
-				updatedItem
-			);
-			
-			if (result) {
-				await this.#store.setItem(`${item.id}`, updatedItem);
-				this.#broadcast(ClientStore.EventType.UPDATED, updatedItem);
-
-				return updatedItem;
-			} else {
-				this.#broadcast(ClientStore.EventType.ABORTED, {
-					action: ClientStore.EventType.UPDATED,
-					data
-				});
-			}
-		} catch (error) {
-			console.error(`Failed to update item with id "${id}"`, error);
-			this.#broadcast(ClientStore.EventType.ERROR, {
-				action: ClientStore.EventType.UPDATED,
-				error,
-				data
-			});
-		}
-		
-		return null;
+			return null;
+		})
 	}
 	
 	/**
 	 * get a list of all items in the store
+	 * @return Array<item>
 	 */
-	async getItems(): Promise<Array<T>> {
+	async getItems(): Promise<Array<Required<T>>> {
 		return this.findItems(() => true);
 	}
 	
 	/**
 	 * get a single item in the store
 	 * @param id
+	 * @return item
 	 */
-	getItem(id: T['id']): Promise<T | null> {
+	async getItem(id: string): Promise<Required<T> | null> {
 		return this.#store.getItem(`${id}`);
 	}
 	
 	/**
-	 * remove a single item from the store
+	 * removes a single item from the store if it exists
 	 * @param id
+	 * @return id | null
 	 */
-	async removeItem(id: T['id']): Promise<true | null> {
-		try {
-			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.DELETED, id);
-			
-			if (shouldChange === true) {
-				await this.#store.removeItem(`${id}`);
-				this.#size = await this.#store.length();
-				this.#broadcast(ClientStore.EventType.DELETED, id);
+	async removeItem(id: string): Promise<string | null> {
+		return this.#trackProcess(EventType.REMOVED, async () => {
+			try {
+				let item = await this.getItem(id) as T;
 				
-				return true;
-			} else {
-				this.#broadcast(ClientStore.EventType.ABORTED, {
-					action: ClientStore.EventType.DELETED,
-					data: id
-				});
+				if (item) {
+					const result = await this.#getWithResult(EventType.REMOVED, id, id);
+					
+					if (result === null) {
+						this.#broadcast(EventType.ABORTED, {
+							action: EventType.REMOVED,
+							data: id
+						});
+					} else {
+						await this.#store.removeItem(`${id}`);
+						this.#broadcast(EventType.REMOVED, id);
+						return id;
+					}
+				}
+			} catch (error: any) {
+				this.#broadcast(EventType.ERROR, this.#createEventData(EventType.REMOVED, id, id, error));
+				throw error;
 			}
-		} catch (error) {
-			console.error(`Failed to delete item with id "${id}"`, error);
-			this.#broadcast(ClientStore.EventType.ERROR, {
-				action: ClientStore.EventType.DELETED,
-				error,
-				data: id
-			});
-		}
-		
-		return null;
+			
+			return null;
+		})
 	}
 	
 	/**
 	 * clear the store from all its items
+	 * @return Array<id> | null
 	 */
-	async clear(): Promise<T['id'][] | null> {
-		const keys: T['id'][] = (await this.#store.keys());
-		
-		try {
-			const shouldChange = await this.#beforeChangeHandler(ClientStore.EventType.CLEARED, keys);
+	async clear(): Promise<string[] | null> {
+		return this.#trackProcess(EventType.CLEARED, async () => {
+			const keys: string[] = (await this.#store.keys());
 			
-			if (shouldChange) {
-				await this.#store.clear();
-				this.#size = await this.#store.length();
-				this.#broadcast(ClientStore.EventType.CLEARED, keys);
-				return keys;
-			} else {
-				this.#broadcast(ClientStore.EventType.ABORTED, {
-					action: ClientStore.EventType.CLEARED,
-					data: keys
-				});
+			try {
+				const result = await this.#getWithResult(EventType.CLEARED, keys);
+				
+				if (result === null) {
+					this.#broadcast(EventType.ABORTED, {
+						action: EventType.CLEARED,
+						data: keys
+					});
+				} else {
+					await this.#store.clear();
+					this.#broadcast(EventType.CLEARED, keys);
+					return keys;
+				}
+			} catch (error: any) {
+				this.#broadcast(EventType.ERROR, this.#createEventData(EventType.CLEARED, keys, null, error));
+				throw error;
 			}
-		} catch (error) {
-			console.error(`Failed to clear the store`, error);
-			this.#broadcast(ClientStore.EventType.ERROR, {
-				action: ClientStore.EventType.CLEARED,
-				error,
-				data: keys
-			});
-		}
-		
-		return null;
+			
+			return null;
+		})
 	}
 	
 	/**
 	 * find a single item in the store
 	 * @param cb
+	 * @return item
 	 */
-	async findItem(cb: (value: T, key: string) => boolean = () => false) {
-		return this.#store.iterate<T, any>((value, key) => {
+	async findItem(cb?: (value: Required<T>, key: string) => boolean) {
+		if (typeof cb !== "function") {
+		    return null
+		}
+		
+		return await this.#store.iterate<Required<T>, any>((value, key) => {
 			const matched = cb(value, key);
 			if (matched) {
 				return value;
 			}
-		}) || null;
+		}) ?? null;
 	}
 	
 	/**
 	 * find multiple items in the store
 	 * @param cb
+	 * @return Array<item>
 	 */
-	async findItems(cb: (value: T, key: string) => boolean = () => false) {
-		const items: T[] = [];
+	async findItems(cb?: (value: Required<T>, key: string) => boolean) {
+		if (typeof cb !== "function") {
+			return []
+		}
 		
-		await this.#store.iterate<T, any>((value, key) => {
+		const items: Required<T>[] = [];
+		
+		await this.#store.iterate<Required<T>, any>((value, key) => {
 			if (cb(value, key)) {
 				value && items.push(value)
 			}
@@ -387,63 +538,116 @@ export class ClientStore<T extends SchemaDefaultValues> {
 		return items;
 	}
 	
-	#broadcast(eventType: ClientStore.EventType, data: any) {
-		this.#subscribers.forEach(sub => sub(eventType, data))
-	}
-	
-	#handleItemBeforeChangeResult(result: Partial<T> | boolean, item: T) {
-		const resultIsObj = `${result}` === "[object Object]";
+	async #mergeExistingItemWithNewData(data: Partial<T>, existingItem: T | null = null): Promise<{item: T, id: string}> {
+		const {defaultKeys, key, createKey, updateKey} = this.#getDefaultKeys();
+		const now = new Date();
+		const itemId = data[key];
+		let item: T = existingItem ?? await this.getItem(itemId as string) as T;
 		
-		if (resultIsObj || result === true) {
-			if (resultIsObj) {
-				for (const valueKey in (result as T)) {
-					if (result.hasOwnProperty(valueKey)) {
-						// @ts-ignore
-						item[valueKey] = result[valueKey]
-					}
-				}
-			}
-			
-			return item;
+		if (item) {
+			item = deepClone(item) as T;
+			// @ts-ignore
+			item[updateKey] = data[updateKey] ?? now;
+		} else {
+			item = this.schema.toValue();
+			// @ts-ignore
+			item[key] = itemId ?? (new SchemaId()).defaultValue;
+			// @ts-ignore
+			item[createKey] = data[createKey] ?? now;
+			// @ts-ignore
+			item[updateKey] = item[createKey];
 		}
 		
-		return null;
-	}
-}
-
-export namespace ClientStore {
-	
-	export type StoreSubscriber = (eventType: ClientStore.EventType, data?: any) => void;
-	
-	export type UnSubscriber = () => void;
-	
-	type BeforeChangeHandlerData<T extends SchemaDefaultValues> = Partial<T> | Array<Partial<T>> | T['id'] | Array<T['id']>
-	type BeforeChangeHandlerReturn<T extends SchemaDefaultValues> = boolean | Partial<T> | Array<Partial<T>>
-	
-	export type BeforeChangeHandler<T extends SchemaDefaultValues> = (eventType: ClientStore.EventType, data: BeforeChangeHandlerData<T>) => Promise<BeforeChangeHandlerReturn<T>> | BeforeChangeHandlerReturn<T>;
-	
-	export interface Config {
-		appName?: string;
-		version?: LocalForageOptions['version'];
-		type?: LocalForageOptions['driver'] | string;
-		description?: LocalForageOptions['description'];
+		for (const itemKey in data) {
+			if (!defaultKeys.has(itemKey) && data.hasOwnProperty(itemKey)) {
+				// @ts-ignore
+				item[itemKey] = data[itemKey];
+			}
+		}
+		
+		return {
+			item,
+			id: item[key] as string
+		};
 	}
 	
-	export enum EventType {
-		READY = "ready",
-		CREATED = "created",
-		LOADED = "loaded",
-		ERROR = "error",
-		ABORTED = "aborted",
-		DELETED = "deleted",
-		UPDATED = "updated",
-		CLEARED = "cleared"
+	#validateData(data: Partial<T> | T, getErr: (invalidFields: string[]) => string) {
+		const {defaultKeys} = this.#getDefaultKeys();
+		const invalidFields = this.schema.getInvalidSchemaDataFields(data as Record<string, any>, defaultKeys);
+		
+		if (invalidFields.length) {
+			throw new Error(getErr(invalidFields))
+		}
 	}
 	
-	export const Type = {
-		LOCALSTORAGE,
-		WEBSQL,
-		INDEXEDDB,
-		MEMORY_STORAGE
+	#broadcast(eventType: EventType, data: any) {
+		this.#subscribers.forEach(sub => sub(eventType, data));
+		this.#eventHandlers.get(eventType)?.forEach(handler => handler(data));
+	}
+	
+	#createEventData(action: EventType, data: EventData<T>, id: string | null = null, error: Error | null = null): ActionEventData<EventData<T>> {
+		return {
+			action,
+			data,
+			id,
+			error
+		}
+	}
+	
+	#getWithResult(event: EventType, data: EventData<T>, id: string | null = null) {
+		const eventData = { data, id };
+		const withHandler = this.#interceptEventHandlers.get(event);
+		
+		if(typeof withHandler === "function") {
+			return withHandler(eventData);
+		}
+		
+		if (this.#beforeChangeHandler) {
+			return this.#beforeChangeHandler(event, eventData);
+		}
+	}
+	
+	#getDefaultKeys() {
+		const key = this.idKeyName;
+		const createKey = this.createdDateKeyName;
+		const updateKey = this.updatedDateKeyName;
+		
+		return {
+			key,
+			createKey,
+			updateKey,
+			defaultKeys: new Set([key, createKey, updateKey]) as Set<string>
+		}
+	}
+	
+	async #trackProcess(type: EventType, cb: () => any) {
+		const processId = `${type}_${Date.now()}`;
+		this.#processes.add(processId);
+		
+		if (this.#processes.size === 1) { // should contain only the newly added one
+			this.#broadcast(EventType.PROCESSING, true);
+			this.#broadcast(EventType.PROCESSING_EVENTS, this.processingEvents);
+		}
+		
+		try {
+			const result = await cb();
+			this.#processes.delete(processId);
+			
+			if (!this.processing) {
+				this.#broadcast(EventType.PROCESSING, false);
+				this.#broadcast(EventType.PROCESSING_EVENTS, this.processingEvents);
+			}
+			
+			return result;
+		} catch (e) {
+			this.#processes.delete(processId);
+			
+			if (!this.processing) {
+				this.#broadcast(EventType.PROCESSING, false);
+				this.#broadcast(EventType.PROCESSING_EVENTS, this.processingEvents);
+			}
+			
+			throw e;
+		}
 	}
 }
