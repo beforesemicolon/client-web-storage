@@ -17,6 +17,7 @@ export const isOfSupportedType = (type:  SchemaValueConstructorType | Schema<any
 		// @ts-ignore
 		return (type[Symbol.hasInstance] ? value instanceof type : typeOf) || typeOf;
 	} catch (e) {
+		// likely errors: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/invalid_right_hand_side_instanceof_operand#examples
 		return false
 	}
 }

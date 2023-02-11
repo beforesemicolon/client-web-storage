@@ -8,9 +8,9 @@ describe('SchemaValue', () => {
 	it('should create', () => {
 		const userSchema = new Schema<any>("user");
 		const todoSchema = new Schema<any>("todo");
-		
+
 		userSchema.defineField("name", String, {required: true});
-		
+
 		todoSchema.defineField("name", String, {required: true});
 		todoSchema.defineField("description", String);
 		todoSchema.defineField("complete", Boolean);
@@ -19,20 +19,31 @@ describe('SchemaValue', () => {
 		expect((new SchemaValue(todoSchema)).toJSON()).toEqual({
 			"defaultValue": {
 				"complete": false,
-				"createdDate": null,
 				"description": "",
-				"id": expect.any(String),
-				"lastUpdatedDate": null,
 				"name": "",
 				"user": {
-					"createdDate": null,
-					"id": expect.any(String),
-					"lastUpdatedDate": null,
 					"name": ""
 				}
 			},
 			"required": false,
 			"type": "Schema<todo>"
+		})
+		expect((new SchemaValue(todoSchema)).toJSON()).toEqual({
+			"defaultValue": {
+				"complete": false,
+				"description": "",
+				"name": "",
+				"user": {
+					"name": ""
+				}
+			},
+			"required": false,
+			"type": "Schema<todo>"
+		})
+		expect((new SchemaValue(Schema, false, {})).toJSON()).toEqual({
+			"defaultValue": {},
+			"required": false,
+			"type": "Schema"
 		})
 		expect((new SchemaValue(Number)).toJSON()).toEqual({
 			"defaultValue": 0,
@@ -54,7 +65,7 @@ describe('SchemaValue', () => {
 			"required": false,
 			"type": "Date"
 		})
-		expect((new SchemaValue(Blob)).toJSON()).toEqual({
+		expect((new SchemaValue(Blob, false)).toJSON()).toEqual({
 			"defaultValue": null,
 			"required": false,
 			"type": "Blob"
@@ -74,47 +85,50 @@ describe('SchemaValue', () => {
 			"required": true,
 			"type": "SchemaId"
 		}))
-		expect((new SchemaValue(ArrayOf(String), true)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": [],
-			"required": true,
-			"type": "Array<String>"
-		}))
-		expect((new SchemaValue(ArrayOf(userSchema), true)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": [],
-			"required": true,
-			"type": "Array<Schema<user>>"
-		}))
-		expect((new SchemaValue(ArrayOf(ArrayOf(Number)), true)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": [],
-			"required": true,
-			"type": "Array<Array<Number>>"
-		}))
-		expect((new SchemaValue(OneOf(Number, Boolean), true)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": null,
-			"required": true,
-			"type": "OneOf<Number, Boolean>"
-		}))
-		expect((new SchemaValue(OneOf(userSchema, String), true)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": null,
-			"required": true,
-			"type": "OneOf<Schema<user>, String>"
-		}))
 		expect((new SchemaValue(Array, true)).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": [],
 			"required": true,
 			"type": "Array"
 		}))
+		expect((new SchemaValue(ArrayOf(String), true, [])).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": [],
+			"required": true,
+			"type": "Array<String>"
+		}))
+		expect((new SchemaValue(ArrayOf({$name: String}), true, [])).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": [],
+			"required": true,
+			"type": "Array<Schema>"
+		}))
+		expect((new SchemaValue(OneOf(String, Number), false, 12)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": 12,
+			"required": false,
+			"type": "String | Number"
+		}))
+		expect((new SchemaValue(OneOf(String, {name: String}), false, "john doe")).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": "john doe",
+			"required": false,
+			"type": "String | Schema"
+		}))
+		expect((new SchemaValue(ArrayOf(OneOf(String, Number)), false, [0, 1, 2])).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": [0, 1, 2],
+			"required": false,
+			"type": "Array<String | Number>"
+		}))
 	});
 
 	it('should throw error if invalid default value type', () => {
 		const userSchema = new Schema<any>("user");
-		
+
 		userSchema.defineField("name", String, {required: true});
-		
+
+		expect(() => new SchemaValue(Blob, true, null)).toThrowError(`Default value does not match type "Blob"`)
+		expect(() => new SchemaValue(SchemaId, true, null)).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(String, false, 12)).toThrowError(`Default value does not match type "String"`)
 		expect(() => new SchemaValue(Number, false, true)).toThrowError(`Default value does not match type "Number"`)
 		expect(() => new SchemaValue(Boolean, false, "")).toThrowError(`Default value does not match type "Boolean"`)
 		expect(() => new SchemaValue(Date, false, null)).toThrowError(`Default value does not match type "Date"`)
+		expect(() => new SchemaValue(Date, false, new Date())).not.toThrowError()
 		expect(() => new SchemaValue(Date, false)).not.toThrowError()
 		expect(() => new SchemaValue(ArrayBuffer, true, [])).toThrowError(`Default value does not match type "ArrayBuffer"`)
 		expect(() => new SchemaValue(Int32Array, true, [])).toThrowError(`Default value does not match type "Int32Array"`)
@@ -123,9 +137,15 @@ describe('SchemaValue', () => {
 		expect(() => new SchemaValue(SchemaId, true, "sample")).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(SchemaId, true, {} as any)).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(OneOf(String), false, 12)).toThrowError(`OneOf requires more than single type listed comma separated`)
-		expect(() => new SchemaValue(OneOf(String, Boolean), false, 12)).toThrowError(`Default value does not match type "OneOf<String, Boolean>"`)
+		expect(() => new SchemaValue(OneOf(String, Boolean), false, 12)).toThrowError('Default value does not match type "String | Boolean"')
 		expect(() => new SchemaValue(OneOf(String, Boolean), false, false)).not.toThrowError()
-		expect(() => new SchemaValue(ArrayOf(String), true, 12)).toThrowError(`Default value does not match type "Array<String>"`)
+		expect(() => new SchemaValue(OneOf(String, OneOf(Number, Boolean)), false, false)).toThrowError('Cannot nest "OneOf" types')
+		expect(() => new SchemaValue(ArrayOf(String), true, 12)).toThrowError('Default value does not match type "Array<String>"')
 		expect(() => new SchemaValue(ArrayOf(String), true)).not.toThrowError()
+	});
+	
+	it('should throw error if invalid value type', () => {
+		// @ts-ignore
+		expect(() => new SchemaValue(Function)).toThrowError(`Invalid SchemaValue type provided. Received "Function"`)
 	});
 })

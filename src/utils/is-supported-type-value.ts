@@ -1,7 +1,8 @@
 import {Schema} from "../Schema";
 import {SchemaId} from "../CustomTypes/SchemaId";
+import {SchemaValueType} from "../types";
 
-export const isSupportedTypeValue = (value: any): boolean => {
+export const isSupportedTypeValue = (value: SchemaValueType): boolean => {
 	return value === null || [
 		Schema,
 		SchemaId,

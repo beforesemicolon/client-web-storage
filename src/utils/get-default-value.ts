@@ -1,6 +1,5 @@
 import {SchemaJSON, SchemaValueConstructorType, SchemaValueType} from "../types";
 import {Schema} from "../Schema";
-import {CustomType} from "../CustomTypes/CustomType";
 
 export const getDefaultValue = (Type: SchemaValueConstructorType | Schema<any>): SchemaValueType | SchemaJSON => {
 	switch (Type) {
@@ -23,7 +22,7 @@ export const getDefaultValue = (Type: SchemaValueConstructorType | Schema<any>):
 			return new Type();
 		default:
 			// Custom types
-			if (/SchemaId|Array<.+>/.test(Type.name)) {
+			if (/SchemaId|ArrayOf|OneOf/.test(Type.name)) {
 				// @ts-ignore
 				return ((new (Type)()).defaultValue);
 			}

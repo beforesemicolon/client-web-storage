@@ -79,4 +79,9 @@ describe('isOfType', () => {
 		})).toBeFalsy()
 		expect(isOfSupportedType(userSchema, {})).toBeFalsy()
 	});
+	
+	it('should handle error', () => {
+		// @ts-ignore
+		expect(isOfSupportedType("", "test")).toBeFalsy()
+	});
 })

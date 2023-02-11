@@ -1,35 +1,22 @@
 import {isNil} from "./utils/is-nil";
 import {isEmptyString} from "./utils/is-empty-string";
-import {isSupportedTypeValue} from "./utils/is-supported-type-value";
 import {SchemaValue} from "./SchemaValue";
 import {isSameValueType} from "./utils/is-same-value-type";
 import {SchemaId} from "./CustomTypes/SchemaId";
-import {SchemaDefaultValues, SchemaJSON, SchemaValueMap, SchemaValueConstructorType} from "./types";
-import {CustomType} from "./CustomTypes/CustomType";
+import {SchemaJSON, SchemaValueConstructorType, SchemaValueMap} from "./types";
 
-export class Schema<T> implements Schema<T> {
-	#defaultKeys = ["id", "createdDate", "lastUpdatedDate"]
-	#obj: SchemaValueMap = {
-		id: new SchemaValue(SchemaId, false),
-		createdDate: new SchemaValue(Date, false),
-		lastUpdatedDate: new SchemaValue(Date, false),
-	};
+export class Schema<T> {
+	#obj: SchemaValueMap = {};
 	#name: string;
-	#includeDefaultKeys = true;
 	
-	constructor(name: string, obj: SchemaValueMap | null = null, includeDefaultKeys = true) {
+	constructor(name: string, map: SchemaValueMap | null = null) {
 		this.#name = name;
-		this.#includeDefaultKeys = includeDefaultKeys;
 		
-		if (!includeDefaultKeys) {
-			this.#obj = {};
-		}
-		
-		if (obj) {
-			for (let objKey in obj) {
-				if (obj.hasOwnProperty(objKey)) {
-					if (obj[objKey] instanceof SchemaValue) {
-						this.#obj[objKey] = obj[objKey];
+		if (map) {
+			for (let objKey in map) {
+				if (map.hasOwnProperty(objKey)) {
+					if (map[objKey] instanceof SchemaValue) {
+						this.#obj[objKey] = map[objKey];
 					} else {
 						throw new Error(`Field "${objKey}" is not a SchemaValue`)
 					}
@@ -42,24 +29,16 @@ export class Schema<T> implements Schema<T> {
 		return this.#name;
 	}
 	
-	get includeDefaultKeys() {
-		return this.#includeDefaultKeys;
-	}
-	
-	get defaultKeys() {
-		return this.#defaultKeys;
-	}
-	
-	defineField(name: keyof T, type: SchemaValueConstructorType | Schema<any>, {
+	defineField(name: string | keyof T, type: SchemaValueConstructorType | Schema<any>, {
 		defaultValue,
 		required
 	}: { defaultValue?: any, required?: boolean } = {}) {
-		this.#obj[`${name}`] = new SchemaValue(type, required, defaultValue);
+		this.#obj[String(name)] = new SchemaValue(type, required, defaultValue);
 	}
 	
 	removeField(name: string | keyof T): void {
 		if (name) {
-			const [first, ...others] = `${name}`.split(".");
+			const [first, ...others] = String(name).split(".");
 			
 			const field = this.#obj[first];
 			
@@ -77,7 +56,7 @@ export class Schema<T> implements Schema<T> {
 	
 	hasField(name: string | keyof T): boolean {
 		if (name) {
-			const [first, ...others] = `${name}`.split(".");
+			const [first, ...others] = String(name).split(".");
 			
 			const field = this.#obj[first];
 			
@@ -97,7 +76,7 @@ export class Schema<T> implements Schema<T> {
 	
 	getField(name: string | keyof T): SchemaValue | null {
 		if (name) {
-			const [first, ...others] = `${name}`.split(".");
+			const [first, ...others] = String(name).split(".");
 			
 			const field = this.#obj[first];
 			
@@ -114,7 +93,7 @@ export class Schema<T> implements Schema<T> {
 	}
 	
 	isValidFieldValue(name: string | keyof T, value: any = null): boolean {
-		const val = this.getField(`${name}`);
+		const val = this.getField(String(name));
 		
 		if (val) {
 			return val.required
@@ -125,17 +104,18 @@ export class Schema<T> implements Schema<T> {
 		return false;
 	}
 	
-	getInvalidSchemaDataFields(value: { [k: string]: any }): string[] {
+	getInvalidSchemaDataFields(value: Record<string, any>, defaultKeys: Set<string> = new Set()): string[] {
 		const invalidFields: Set<string> = new Set();
 		
 		const requiredFields = Object.keys(this.#obj).filter(key => this.#obj[key].required);
+		const keys = [...Object.keys(value as {}), ...requiredFields];
 		
-		for (const valueKey of [...Object.keys(value), ...requiredFields]) {
-			if (!this.defaultKeys.includes(valueKey)) {
+		for (const valueKey of keys) {
+			if (!defaultKeys.has(valueKey as string)) {
 				const schemaVal = this.getField(valueKey as keyof T);
 				const val = value[valueKey];
 				
-				if (/Array<.+>/.test(schemaVal?.type.name ?? '')) {
+				if (/ArrayOf/.test(schemaVal?.type.name ?? '')) {
 					if (!(val instanceof Array)) {
 						invalidFields.add(valueKey);
 						continue;
@@ -158,7 +138,7 @@ export class Schema<T> implements Schema<T> {
 					}
 				}
 				
-				if (/OneOf<.+>/.test(schemaVal?.type.name ?? '')) {
+				if (/OneOf/.test(schemaVal?.type.name ?? '')) {
 					// @ts-ignore
 					const Type = (new (schemaVal.type as any)());
 					const schema = Type.type.find((t: any) => t instanceof Schema);
@@ -216,16 +196,12 @@ export class Schema<T> implements Schema<T> {
 	toValue(): T {
 		const nowDate = new Date();
 		
-		const obj: { [k: string]: any } = this.includeDefaultKeys ? {
-			// set default key values
-			id: (new SchemaId()).defaultValue,
-			createdDate: nowDate,
-			lastUpdatedDate: nowDate,
-		} : {};
+		const obj: { [k: string]: any } = {};
 		
 		for (let mapKey in this.#obj) {
 			if (this.#obj.hasOwnProperty(mapKey)) {
 				const val = this.#obj[mapKey];
+				
 				switch (true) {
 					case val.type instanceof Schema:
 						obj[mapKey] = (val.type as Schema<any>).toValue();

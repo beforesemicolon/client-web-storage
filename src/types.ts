@@ -1,6 +1,8 @@
 import {SchemaValue} from "./SchemaValue";
 import {CustomType} from "./CustomTypes/CustomType";
 import {Schema} from "./Schema";
+import {INDEXEDDB, LOCALSTORAGE, WEBSQL} from "localforage";
+import {MEMORYSTORAGE} from "./MemoryStore";
 
 export interface BlobConstructor {
 	prototype: Blob;
@@ -8,8 +10,11 @@ export interface BlobConstructor {
 	new(blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
 }
 
+export type SchemaObjectLiteral = Record<string, SchemaValueType | SchemaValueConstructorType | Record<string, SchemaValueType | SchemaValueConstructorType>>;
+
 export type SchemaValueConstructorType =
 	| typeof CustomType
+	| typeof Schema
 	| DateConstructor
 	| NumberConstructor
 	| StringConstructor
@@ -62,7 +67,74 @@ export interface SchemaValueMap {
 }
 
 export interface SchemaDefaultValues {
-	id?: string;
-	createdDate?: Date;
-	lastUpdatedDate?: Date;
+	_id: string;
+	_createdDate: Date;
+	_lastUpdatedDate: Date;
 }
+
+export interface ActionEventData<D> {
+	data: D,
+	error: Error | null,
+	action: EventType,
+	id: string | null
+}
+
+interface InterceptData<T> { data: EventData<T>, id: string | null }
+
+export type EventData<T> = T | T[] | Partial<T> | Partial<T>[] |string | string[] | EventType[] | boolean | ActionEventData<T>;
+
+export type StoreSubscriber<T> = (eventType: EventType, data: EventData<T>) => void;
+
+export type EventHandler<T> = (data: EventData<T>) => void;
+
+export type UnSubscriber = () => void;
+
+type BeforeChangeHandlerReturn<T> = null | ActionEventData<EventData<T>> | void;
+
+type InterceptEventHandlerReturn<T> = null | ActionEventData<EventData<T>> | void;
+
+export type BeforeChangeHandler<T> = (eventType: EventType, data: InterceptData<T>) => Promise<BeforeChangeHandlerReturn<T>> | BeforeChangeHandlerReturn<T>;
+
+export type InterceptEventHandler<T> = (data: InterceptData<T>) => Promise<InterceptEventHandlerReturn<T>> | InterceptEventHandlerReturn<T>;
+
+export interface Config {
+	appName?: string;
+	version?: number;
+	type?: string | string[];
+	description?: string;
+	idKeyName?: string;
+	createdDateKeyName?: string;
+	updatedDateKeyName?: string;
+}
+
+export enum EventType {
+	READY = "ready",
+	PROCESSING = "processing",
+	PROCESSING_EVENTS = "processing-events",
+	CREATED = "created",
+	LOADED = "loaded",
+	ERROR = "error",
+	ABORTED = "aborted",
+	REMOVED = "removed",
+	UPDATED = "updated",
+	CLEARED = "cleared"
+}
+
+export const StorageType = {
+	LOCALSTORAGE,
+	WEBSQL,
+	INDEXEDDB,
+  MEMORYSTORAGE
+}
+
+export interface StoreState<T> {
+	items: T[];
+	processing: boolean;
+	creatingItems: boolean;
+	updatingItems: boolean;
+	deletingItems: boolean;
+	loadingItems: boolean;
+	clearingItems: boolean;
+	error: Error | null;
+}
+
