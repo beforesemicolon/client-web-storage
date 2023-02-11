@@ -29,7 +29,7 @@ export class Schema<T> {
 		return this.#name;
 	}
 	
-	defineField(name: string | keyof T, type: SchemaValueConstructorType | Schema<any>, {
+	defineField(name: string | keyof T, type: SchemaValueConstructorType | Schema<T>, {
 		defaultValue,
 		required
 	}: { defaultValue?: any, required?: boolean } = {}) {

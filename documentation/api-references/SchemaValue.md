@@ -26,6 +26,16 @@ Whether the value is required
 #### Required: FALSE
 #### Default Value: `undefined`
 
+## Properties
+None
+
+## Methods
+| Name                         | Description                                | Async   | Arguments | Return         |
+|------------------------------|--------------------------------------------|---------|-----------|----------------|
+| `toJSON`                     | Get a `JSON` representation os the value   | no      | `None`    | `JSONValue`    |
+| `toString`                   | Get a `string` representation os the value | no      | `None`    | `string`       |
+
+
 ## Errors
 
 ### Invalid SchemaValue type provided

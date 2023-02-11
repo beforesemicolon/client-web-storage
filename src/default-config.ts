@@ -4,7 +4,7 @@ import {Config} from "./types";
 export const defaultConfig: Config = {
 	version: 1,
 	type: MEMORYSTORAGE,
-	description: "client-web-storage",
+	description: "",
 	appName: "App",
 	idKeyName: "_id",
 	createdDateKeyName: "_createdDate",
