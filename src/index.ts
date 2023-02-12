@@ -5,3 +5,4 @@ export {ArrayOf} from './CustomTypes/ArrayOf';
 export {OneOf} from './CustomTypes/OneOf';
 export {SchemaValue} from './SchemaValue';
 export {ClientStore} from './ClientStore';
+export {AppState} from './AppState';

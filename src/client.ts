@@ -4,6 +4,7 @@ import {ArrayOf} from './CustomTypes/ArrayOf';
 import {OneOf} from './CustomTypes/OneOf';
 import {SchemaValue} from './SchemaValue';
 import {ClientStore} from './ClientStore';
+import {AppState} from './AppState';
 import {EventType, StorageType} from './types';
 
 // @ts-ignore
@@ -17,6 +18,7 @@ if (window) {
 		OneOf,
 		ClientStore,
 		EventType,
-		StorageType
+		StorageType,
+		AppState
 	}
 }
