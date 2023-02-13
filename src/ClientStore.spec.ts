@@ -1443,6 +1443,9 @@ describe('ClientStore', () => {
 				}
 				
 				const newTodo = await todoStore.createItem(data);
+				const goItem = await todoStore.getItem(newTodo._id);
+				
+				expect(goItem).not.toBeNull();
 				
 				expect(beforeChangeHandler).not.toHaveBeenCalled();
 				expect(processingEventHandler).toHaveBeenCalledWith(true);

@@ -352,7 +352,7 @@ export class ClientStore<T> {
 					);
 				}
 				
-				const setItem = await this.#store.setItem(String(id), item);
+				const setItem = await this.#store.setItem(String(item[this.idKeyName]), item);
 				this.#broadcast(EventType.CREATED, setItem);
 				
 				return setItem;
@@ -433,7 +433,7 @@ export class ClientStore<T> {
 	 * @return item
 	 */
 	async getItem(id: string): Promise<Required<T> | null> {
-		return this.#store.getItem(`${id}`);
+		return this.#store.getItem(String(id));
 	}
 	
 	/**
