@@ -3,6 +3,7 @@ import {SchemaObjectLiteral, SchemaValueConstructorType} from "../types";
 import {Schema} from "../Schema";
 import {ArrayOf} from "./ArrayOf";
 import {SchemaValue} from "../SchemaValue";
+import {Null} from "./Null";
 
 describe('OneOf', () => {
 	const getOneOfInstance = (...types: Array<SchemaObjectLiteral | SchemaValueConstructorType | Schema<any>>) => {
@@ -11,6 +12,7 @@ describe('OneOf', () => {
 	}
 	
 	it('should have to correct name', () => {
+		expect(getOneOfInstance(Number, Null).name).toBe('Number | Null');
 		expect(getOneOfInstance(String, Number).name).toBe('String | Number');
 		expect(getOneOfInstance(String, Boolean).name).toBe('String | Boolean');
 		expect(getOneOfInstance(Date, Boolean).name).toBe('Date | Boolean');

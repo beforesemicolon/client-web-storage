@@ -1,9 +1,14 @@
 import {SchemaValueConstructorType} from "../types";
 import {Schema} from "../Schema";
 import {isNil} from "./is-nil";
+import {Null} from "../CustomTypes/Null";
 
 export const isOfSupportedType = (type:  SchemaValueConstructorType | Schema<any>, value: any) => {
-	if ((typeof value === "number" && isNaN(value)) || (!value && isNil(value))) {
+	if(type === Null) {
+		return value === null;
+	}
+	
+	if ((typeof value === "number" && isNaN(value)) || (!value && value === undefined)) {
 		return false;
 	}
 	

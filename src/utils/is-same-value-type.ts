@@ -28,6 +28,10 @@ export const isSameValueType = (type: SchemaValueConstructorType | Schema<any>, 
 			return `${value}` === '[object Object]';
 		}
 		
+		if (/Null/.test(type?.name)) {
+			return value === null;
+		}
+		
 		return isOfSupportedType(type, value);
 	} catch (e) {
 		return false
