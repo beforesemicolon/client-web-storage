@@ -2,6 +2,7 @@ import {Schema} from './Schema';
 import {SchemaId} from './CustomTypes/SchemaId';
 import {ArrayOf} from './CustomTypes/ArrayOf';
 import {OneOf} from './CustomTypes/OneOf';
+import {Null} from './CustomTypes/Null';
 import {SchemaValue} from './SchemaValue';
 import {ClientStore} from './ClientStore';
 import {AppState} from './AppState';
@@ -16,6 +17,7 @@ if (window) {
 		SchemaId,
 		ArrayOf,
 		OneOf,
+		Null,
 		ClientStore,
 		EventType,
 		StorageType,
