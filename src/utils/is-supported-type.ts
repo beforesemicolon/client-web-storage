@@ -6,7 +6,7 @@ import {CustomType} from "../CustomTypes/CustomType";
 export const isSupportedType = (value: SchemaValueConstructorType): boolean => {
 	const valueTypeName = ((value || {name: ''}) as unknown as CustomType).name;
 	
-	return /ArrayOf|OneOf/.test(valueTypeName) || [
+	return /ArrayOf|OneOf|Null/.test(valueTypeName) || [
 		Schema,
 		SchemaId,
 		Date,

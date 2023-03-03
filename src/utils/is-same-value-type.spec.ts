@@ -3,6 +3,7 @@ import {ArrayOf} from "../CustomTypes/ArrayOf";
 import {OneOf} from "../CustomTypes/OneOf";
 import {SchemaId} from "../CustomTypes/SchemaId";
 import {Schema} from "../Schema";
+import {Null} from "../CustomTypes/Null";
 
 describe("isSameValueType", () => {
 	it('should handle Array', () => {
@@ -30,6 +31,12 @@ describe("isSameValueType", () => {
 	it('should handle Schema', () => {
 		expect(isSameValueType(Schema, null)).toBeFalsy()
 		expect(isSameValueType(Schema, {})).toBeTruthy()
+	});
+	
+	it('should handle Null', () => {
+		expect(isSameValueType(Null, null)).toBeTruthy()
+		expect(isSameValueType(Null, {})).toBeFalsy()
+		expect(isSameValueType(Null, undefined)).toBeFalsy()
 	});
 	
 	it('should handle error', () => {

@@ -1,6 +1,7 @@
 import {isOfSupportedType} from "./is-of-supported-type";
 import {Schema} from "../Schema";
 import {SchemaValue} from "../SchemaValue";
+import {Null} from "../CustomTypes/Null";
 
 describe('isOfType', () => {
 	it('should always be false for nil and NaN values', () => {
@@ -58,6 +59,10 @@ describe('isOfType', () => {
 	
 	it('should match Blob', () => {
 		expect(isOfSupportedType(Blob, new Blob())).toBeTruthy()
+	});
+	
+	it('should match Null', () => {
+		expect(isOfSupportedType(Null, null)).toBeTruthy()
 	});
 	
 	it('should match Schema', () => {

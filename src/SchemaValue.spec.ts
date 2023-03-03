@@ -3,6 +3,7 @@ import {SchemaId} from "./CustomTypes/SchemaId";
 import {ArrayOf} from "./CustomTypes/ArrayOf";
 import {Schema} from "./Schema";
 import {OneOf} from "./CustomTypes/OneOf";
+import {Null} from "./CustomTypes/Null";
 
 describe('SchemaValue', () => {
 	it('should create', () => {
@@ -110,10 +111,23 @@ describe('SchemaValue', () => {
 			"required": false,
 			"type": "String | Schema"
 		}))
+		
+		expect((new SchemaValue(OneOf(Number, Null), false)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": null,
+			"required": false,
+			"type": "Number | Null"
+		}))
+		
 		expect((new SchemaValue(ArrayOf(OneOf(String, Number)), false, [0, 1, 2])).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": [0, 1, 2],
 			"required": false,
 			"type": "Array<String | Number>"
+		}))
+		
+		expect((new SchemaValue(Null, true)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": null,
+			"required": true,
+			"type": "Null"
 		}))
 	});
 
@@ -142,6 +156,8 @@ describe('SchemaValue', () => {
 		expect(() => new SchemaValue(OneOf(String, OneOf(Number, Boolean)), false, false)).toThrowError('Cannot nest "OneOf" types')
 		expect(() => new SchemaValue(ArrayOf(String), true, 12)).toThrowError('Default value does not match type "Array<String>"')
 		expect(() => new SchemaValue(ArrayOf(String), true)).not.toThrowError()
+		expect(() => new SchemaValue(Null, true)).not.toThrowError()
+		expect(() => new SchemaValue(Null, true, undefined)).not.toThrowError()
 	});
 	
 	it('should throw error if invalid value type', () => {

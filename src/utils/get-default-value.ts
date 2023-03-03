@@ -22,7 +22,7 @@ export const getDefaultValue = (Type: SchemaValueConstructorType | Schema<any>):
 			return new Type();
 		default:
 			// Custom types
-			if (/SchemaId|ArrayOf|OneOf/.test(Type.name)) {
+			if (/SchemaId|ArrayOf|OneOf|Null/.test(Type.name)) {
 				// @ts-ignore
 				return ((new (Type)()).defaultValue);
 			}

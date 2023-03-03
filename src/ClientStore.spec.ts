@@ -7,6 +7,8 @@ import {SchemaValue} from "./SchemaValue";
 import {SchemaId} from "./CustomTypes/SchemaId";
 import {INDEXEDDB, LOCALSTORAGE} from "localforage";
 import {generateUUID} from "./utils/generate-uuid";
+import {OneOf} from "./CustomTypes/OneOf";
+import {Null} from "./CustomTypes/Null";
 
 interface User {
 	name: string;
@@ -1813,6 +1815,46 @@ describe('ClientStore', () => {
 		});
 		
 		expect(result).toEqual(null);
+	});
+	
+	it('should handle null', async () => {
+		const data = new ClientStore<any>(`todo-${generateUUID()}`, {
+			name: String,
+			status: OneOf(Number, Null),
+			none: Null
+		});
+		
+		expect(data.schema.toJSON()).toEqual({
+			"name": {
+				"defaultValue": "",
+				"required": false,
+				"type": "String"
+			},
+			"none": {
+				"defaultValue": null,
+				"required": false,
+				"type": "Null"
+			},
+			"status": {
+				"defaultValue": null,
+				"required": false,
+				"type": "Number | Null"
+			}
+		});
+		
+		let item = await data.createItem({
+			name: "sample",
+			status: 1
+		})
+		
+		expect(item.name).toBe('sample')
+		expect(item.status).toBe(1)
+		
+		let item2 = await data.createItem({
+			status: null
+		})
+		
+		expect(item2.status).toBe(null)
 	});
 });
 

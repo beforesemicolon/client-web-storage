@@ -4,6 +4,7 @@ import {SchemaId} from "./CustomTypes/SchemaId";
 import {SchemaValue} from "./SchemaValue";
 import {ArrayOf} from "./CustomTypes/ArrayOf";
 import {OneOf} from "./CustomTypes/OneOf";
+import {Null} from "./CustomTypes/Null";
 
 describe('Schema', () => {
 	it('should fail if obj is invalid', () => {
@@ -334,7 +335,7 @@ describe('Schema', () => {
 		
 		it('OneOf', () => {
 			let oneOfSchema = new Schema("array", {
-				data: new SchemaValue(OneOf(Number, String))
+				data: new SchemaValue(OneOf(Number, String, Null))
 			})
 			
 			expect(oneOfSchema.toJSON()).toBeDefined()
@@ -342,7 +343,7 @@ describe('Schema', () => {
 				"data": {
 					"defaultValue": null,
 					"required": false,
-					"type": "Number | String"
+					"type": "Number | String | Null"
 				},
 			})
 			expect(oneOfSchema.isValidFieldValue("data", [12])).toBeFalsy()
@@ -350,6 +351,7 @@ describe('Schema', () => {
 			expect(oneOfSchema.isValidFieldValue("data", 34)).toBeTruthy()
 			expect(oneOfSchema.isValidFieldValue("data", new String("sample"))).toBeTruthy()
 			expect(oneOfSchema.isValidFieldValue("data", "sample")).toBeTruthy()
+			expect(oneOfSchema.isValidFieldValue("data", null)).toBeTruthy()
 			expect(oneOfSchema.getInvalidSchemaDataFields({
 				new: "yes"
 			})).toEqual(["new"])
@@ -362,7 +364,7 @@ describe('Schema', () => {
 			})).toEqual([])
 			expect(oneOfSchema.getInvalidSchemaDataFields({
 				data: null,
-			})).toEqual(["data"])
+			})).toEqual([])
 			
 			const userSchema = new Schema("user", {
 				name: new SchemaValue(String, true),
@@ -524,6 +526,37 @@ describe('Schema', () => {
 			})).toEqual(["new"])
 			expect(in32ArraySchema.getInvalidSchemaDataFields({
 				data: in32Array,
+			})).toEqual([])
+		});
+		
+		it('Null', () => {
+			interface DT extends SchemaDefaultValues {
+				data: null;
+			}
+			
+			const schema = new Schema<DT>("null", {
+				data: new SchemaValue(Null)
+			})
+			
+			expect(schema.toJSON()).toEqual({
+				"data": {
+					"defaultValue": null,
+					"required": false,
+					"type": "Null"
+				},
+			})
+			expect(schema.isValidFieldValue("data", null)).toBeTruthy()
+			expect(schema.isValidFieldValue("data", "sample")).toBeFalsy()
+			expect(schema.getInvalidSchemaDataFields({
+				data: 12,
+				new: "yes"
+			})).toEqual(["data", "new"])
+			expect(schema.getInvalidSchemaDataFields({
+				data: null,
+				new: "yes"
+			})).toEqual(["new"])
+			expect(schema.getInvalidSchemaDataFields({
+				data: null,
 			})).toEqual([])
 		});
 	})

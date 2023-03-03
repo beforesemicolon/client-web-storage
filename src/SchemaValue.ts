@@ -21,7 +21,7 @@ export class SchemaValue {
 		
 		this.#type = this.type instanceof Schema
 			? `Schema<${this.type.name}>`
-			: /ArrayOf|OneOf|SchemaId/.test(type.name)
+			: /ArrayOf|OneOf|SchemaId|Null/.test(type.name)
 				// @ts-ignore
 				? (new type()).name
 				: this.type.name

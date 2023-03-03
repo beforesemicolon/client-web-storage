@@ -5,7 +5,7 @@ import {isObjectLiteral} from "../utils/is-object-literal";
 export class CustomType {
 	constructor(
 		public name: string,
-		public type: SchemaObjectLiteral | SchemaValueConstructorType | Schema<any> | Array<SchemaObjectLiteral | SchemaValueConstructorType | Schema<any>>,
+		public type: SchemaObjectLiteral | SchemaValueConstructorType | Schema<any> | Array<SchemaObjectLiteral | SchemaValueConstructorType | Schema<any>> | null,
 		public defaultValue: SchemaValueType,
 	) {
 	}
