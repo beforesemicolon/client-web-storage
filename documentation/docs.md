@@ -352,17 +352,19 @@ of data for your store.
 
 Below is all supported types compared to `typescript` to show that the difference is minimal
 
-| Typescript Example            | Javascript Example               | Type   | Store Default Value             |
+| Typescript Example            | CWS/Javascript Example           | Type   | Store Default Value             |
 |-------------------------------|----------------------------------|--------|---------------------------------|
 | `boolean`                     | `Boolean`                        | Native | `false`                         |
 | `string`                      | `String`                         | Native | `""`                            |
 | `number`                      | `Number`                         | Native | `0`                             |
+| `null`                        | `Null`                           | CWS    | `null`                          |
 | `Date`                        | `Date`                           | Native | `null`                          |
 | `Array`                       | `Array`                          | Native | `[]`                            |
 | `Array<String>`               | `ArrayOf(String)`                | CWS    | `[]`                            |
 | `String &#124; Number`        | `OneOf(String, Number)`          | CWS    | `null`                          |
 | `Array<String &#124; Number>` | `ArrayOf(OneOf(String, Number))` | CWS    | `[]`                            |
 | `string`                      | `SchemaId`                       | CWS    | `(new SchemaId()).defaultValue` |
+| `Record<K, V>`                | `Schema`                         | CWS    | `{}`                            |
 | `Blob`                        | `Blob`                           | Native | `null`                          |
 | `ArrayBuffer`                 | `ArrayBuffer`                    | Native | `null`                          |
 | `Float32Array`                | `Float32Array`                   | Native | `new Float32Array()`            |
