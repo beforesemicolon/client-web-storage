@@ -136,5 +136,12 @@ export interface StoreState<T> {
 	loadingItems: boolean;
 	clearingItems: boolean;
 	error: Error | null;
+	loadItems: (dataList: Array<Partial<T>>) => Promise<Array<Required<T> & SchemaDefaultValues>>;
+	createItem: (data: Partial<T>) => Promise<Required<T> & SchemaDefaultValues>;
+	updateItem: (id: string, data: Partial<T>) => Promise<Required<T> & SchemaDefaultValues>;
+	removeItem: (id: string) => Promise<string | null>;
+	clear: () => Promise<string[] | null>;
+	findItem: (cb?: (value: Required<T>, key: string) => boolean) => Promise<T | null>;
+	findItems: (cb?: (value: Required<T>, key: string) => boolean) => Promise<T[]>
 }
 

@@ -10,7 +10,7 @@ export class AppState<T> {
 		return this.#extractStateFromItem(this.#item);
 	}
 	
-	constructor(name: string, schema: Schema<T> | SchemaObjectLiteral) {
+	constructor(public name: string, schema: Schema<T> | SchemaObjectLiteral) {
 		this.#store = new ClientStore<T>(name, schema);
 		this.#item = this.#store.schema.toValue() as T & SchemaDefaultValues;
 	}

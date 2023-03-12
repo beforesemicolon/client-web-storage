@@ -1,7 +1,7 @@
 import {ActionEventData, EventType, StoreState, UnSubscriber} from "../types";
 import {ClientStore} from "../ClientStore";
 
-export const DefaultStoreState = {
+export const DefaultStoreState = <T>(store: ClientStore<T>): StoreState<T> => ({
 	items: [],
 	processing: false,
 	creatingItems: false,
@@ -9,14 +9,19 @@ export const DefaultStoreState = {
 	deletingItems: false,
 	loadingItems: false,
 	clearingItems: false,
-	error: null
-};
+	error: null,
+	createItem: (...args) => store.createItem(...args),
+	updateItem: (...args) => store.updateItem(...args),
+	loadItems: (...args) => store.loadItems(...args),
+	removeItem: (...args) => store.removeItem(...args),
+	findItems: (...args) => store.findItems(...args),
+	findItem: (...args) => store.findItem(...args),
+	clear: (...args) => store.clear(...args),
+});
 
 export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState<T>) => void): UnSubscriber => {
-	let data: StoreState<T> = {
-		...DefaultStoreState,
-		processing: !store.ready
-	};
+	let data: StoreState<T> = DefaultStoreState<T>(store);
+	data.processing = !store.ready;
 	
 	const loadItems = () => {
 		store.getItems()
@@ -38,21 +43,21 @@ export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState
 				break;
 			case EventType.PROCESSING_EVENTS:
 				const events = new Set(details as EventType[]);
-				data = {
-					...data,
-					processing: events.size > 0,
-					creatingItems: events.has(EventType.CREATED),
-					updatingItems: events.has(EventType.UPDATED),
-					deletingItems: events.has(EventType.REMOVED),
-					loadingItems: events.has(EventType.LOADED),
-					clearingItems: events.has(EventType.CLEARED),
-				};
+				
+				data.processing = events.size > 0;
+				data.creatingItems = events.has(EventType.CREATED);
+				data.updatingItems = events.has(EventType.UPDATED);
+				data.deletingItems = events.has(EventType.REMOVED);
+				data.loadingItems = !data.items.length && events.has(EventType.LOADED);
+				data.clearingItems = events.has(EventType.CLEARED);
+				
 				cb(data);
 				break;
 			case EventType.ERROR:
 				const {action, error} = details as ActionEventData<T>;
 				
-				data = {...data, error: new Error(`${action}: ${error?.message}`)};
+				data.error = new Error(`${action}: ${error?.message}`);
+				
 				cb(data);
 				break;
 			case EventType.CREATED:

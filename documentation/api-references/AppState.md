@@ -24,9 +24,10 @@ A [schema instance]() of [schema object]().
 Inherits all error states from [ClientStore](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/ClientStore.md)
 
 ## Properties
-| Name                | Description                                 | Type                    |
-|---------------------|---------------------------------------------|-------------------------|
-| value               | Contains the state value of the application | `T` as in `AppState<T>` |
+| Name  | Description                                 | Type                    |
+|-------|---------------------------------------------|-------------------------|
+| name  | name given to the state                     | `string`                |
+| value | Contains the state value of the application | `T` as in `AppState<T>` |
 
 ## Methods
 | Name       | Description                                                                                               | Arguments                                                  |

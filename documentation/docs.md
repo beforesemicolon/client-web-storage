@@ -922,39 +922,98 @@ The `Client-Web-Storage` package exposes various helpers which are intended to h
 you application much easier.
 
 ### useClientStore
-React hook that consumes a store and provides the store state.
+React helper that given a store instance or name, provides a store state which is much easier to interact or consume store
+data.
+
+It exposes a hook and a provider.
+```ts
+import {useClientStore, ClientStoreProvider} from "client-web-storage/helpers/use-client-store";
+```
+
+You can choose to inject all your stores at the top level of your app or section or your app
+
+```ts
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+
+root.render(
+  <ClientStoreProvider stores={[todoStore]}>
+    <App />
+  </ClientStoreProvider>
+);
+```
+
+Then simply consume the store like so:
 
 ```ts
 // app.tsx
 
 import {useClientStore} from "client-web-storage/helpers/use-client-store";
-import {todoStore} from "./stores/todo.store";
 
 const App = () => {
-    const {items, processing, error} = useClientStore<Todo>(todoStore);
+    const todoStore = useClientStore<Todo>("todo");
 		
-    ...
+    const handleCreateItem = async () => {
+      await todoStore.createItem({
+        name: "todo-" + crypto.randomUUID()
+      })
+    }
+		
+    return (
+      <>
+        <h2>Todos</h2>
+        <ActionBar>
+            <Button onClick={handleCreateItem} >Create Todo</Button>
+        </ActionBar>
+        {todoStore.loadingItems 
+            ? <Spinner/>
+            : todoStore.error 
+                ? <Status type="error" message={todoStore.error.message} />
+                : todoStore.items.map(todo => <TodoItem data={todo} />)}
+      </>
+    )
 }
 ```
 
 ### useAppState
-React hook that consumes the app state and provides the app state data.
+React helper that given a app state instance or name, provides a store state which is much easier to interact or consume
+data.
+
+It exposes a hook and a provider.
+
+```ts
+import {useAppState, AppStateProvider} from "client-web-storage/helpers/use-app-state";
+```
+
+You can choose to inject all your stores at the top level of your app or section or your app
+
+```ts
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+
+root.render(
+  <AppStateProvider states={[appAppState]}>
+    <App />
+  </AppStateProvider>
+);
+```
 
 ```ts
 // app.tsx
 
 import {useAppState} from "client-web-storage/helpers/use-app-state";
-import {appState, State} from "./stores/app.state";
 
 const App = () => {
-    const {state, error} = useAppState<State>(appState);
+    const {state, setState, error} = useAppState<AppStateType>(appState);
 		
     ...
 }
 ```
 
 ### withClientStore
-A Higher Oder Function which can be used with any UI framework to easily consume the store data and state.
+A Higher Order Function which can be used with any UI framework to easily consume the store data.
 
 Bellow is an example on how to use it with Angular.
 

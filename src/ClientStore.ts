@@ -504,7 +504,7 @@ export class ClientStore<T> {
 	 * @param cb
 	 * @return item
 	 */
-	async findItem(cb?: (value: Required<T>, key: string) => boolean) {
+	async findItem(cb?: (value: Required<T>, key: string) => boolean): Promise<T | null> {
 		if (typeof cb !== "function") {
 		    return null
 		}
@@ -522,7 +522,7 @@ export class ClientStore<T> {
 	 * @param cb
 	 * @return Array<item>
 	 */
-	async findItems(cb?: (value: Required<T>, key: string) => boolean) {
+	async findItems(cb?: (value: Required<T>, key: string) => boolean): Promise<Array<Required<T>>> {
 		if (typeof cb !== "function") {
 			return []
 		}
