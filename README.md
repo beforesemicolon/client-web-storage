@@ -13,21 +13,6 @@ Powerful Web Application Data Storage and State Management Solution.
 - Highly and easily configurable;
 - Easy to tap into any store events to perform side effect logic;
 
-## Documentation
-
-[Documentation](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/docs.md)
-
-#### Application Examples
-- [React](https://github.com/beforesemicolon/client-web-storage-project-examples/tree/main/react);
-- [Angular](https://github.com/beforesemicolon/client-web-storage-project-examples/tree/main/angular);
-
-[-- Check them All ---](https://github.com/beforesemicolon/client-web-storage-project-examples)
-
-#### API References
-- **[ClientStore](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/ClientStore.md)**
-- **[Schema](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/Schema.md)**
-- **[SchemaValue](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/SchemaValue.md)**
-
 ## Quick Example
 
 ```ts
@@ -56,22 +41,22 @@ Works with any web library or framework. Here is an example using React.
 // app.tsx
 
 import {useClientStore} from "client-web-storage/helpers/use-client-store";
-import {todoStore} from "./stores/todo.store";
+import {Todo} from "./stores/todo.store";
 import FlatList from "flatlist-react";
 
 const App = () => {
-    const {items, processing, error} = useClientStore<Todo>(todoStore);
+    const todos = useClientStore<Todo>("todo");
 		
-    if(processing) {
+    if(todos.processing) {
         return <Spinner />
     }
     
-    if(error) {
+    if(todos.error) {
         return <p className="error">{error.message}</p>
     }
 	
     const handleCreatItem = async () => {
-        await todoStore.createItem({
+        await todos.createItem({
             // only name is required (marked with $), the store will auto fill the other fields with defaults
             name: "Go to Gym" 
         });
@@ -80,7 +65,7 @@ const App = () => {
     return (
         <>
             <button type="button" onClick={handleCreatItem}>create todo</button>
-            <FlatList list={items} renderItem={renderTodo}/>
+            <FlatList list={todos.items} renderItem={renderTodo}/>
         </>
     )
 }
@@ -113,3 +98,18 @@ import {Schema, ClientStore} from "client-web-storage";
   const {Schema, ClientStore} = window.CWS;
 </script>
 ```
+
+## Documentation
+
+[Documentation](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/docs.md)
+
+#### Application Examples
+- [React](https://github.com/beforesemicolon/client-web-storage-project-examples/tree/main/react);
+- [Angular](https://github.com/beforesemicolon/client-web-storage-project-examples/tree/main/angular);
+
+[-- Check them All ---](https://github.com/beforesemicolon/client-web-storage-project-examples)
+
+#### API References
+- **[ClientStore](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/ClientStore.md)**
+- **[Schema](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/Schema.md)**
+- **[SchemaValue](https://github.com/beforesemicolon/client-web-storage/blob/main/documentation/api-references/SchemaValue.md)**
