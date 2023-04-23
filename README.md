@@ -87,10 +87,10 @@ import {Schema, ClientStore} from "client-web-storage";
 
 ```html
 <!-- use the latest version -->
-<script src="https://unpkg.com/client-web-storage/dist/client-web-storage.min.js"></script>
+<script src="https://unpkg.com/client-web-storage/client-web-storage.min.js"></script>
 
 <!-- use a specific version -->
-<script src="https://unpkg.com/client-web-storage@1.0.0/dist/client-web-storage.min.js"></script>
+<script src="https://unpkg.com/client-web-storage@1.7.5/client-web-storage.min.js"></script>
 ```
 
 ```html
