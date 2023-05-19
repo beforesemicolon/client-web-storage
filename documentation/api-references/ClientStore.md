@@ -29,7 +29,7 @@ Store configuration object
 #### Fields
 - `appName`: name of the app. Think about it like database and the stores like tables or documents in the database;
 - `version`: version of the store. Used for `INDEXEDDB` and `WEBSQL` store types
-- `type`: Determines how the data is saved in the browser. Valid values:
+- `type`: Determines how the data is saved in the browser. Valid values accessed via importing `StorageType`:
   - `LOCALSTORAGE`;
   - `WEBSQL`;
   - `INDEXEDDB`;
