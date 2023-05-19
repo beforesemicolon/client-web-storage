@@ -147,6 +147,11 @@ do not point to the same document/table.
 ### Storage Types
 By default, all store's data will be kept in memory. That means that when you create a store, its storage type is `MEMORYSTORAGE`.
 
+```ts
+// get all the types
+import {StorageType} from "client-web-storage";
+```
+
 There are four storage types:
 - `MEMORYSTORAGE` - data stored in-memory
 - `LOCALSTORAGE` - data stored in [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
@@ -159,7 +164,7 @@ You change the storage type by setting the `type` in the [ClientStore Configurat
 const todo = new ClientStore("todo", {
   $name: String
 }, {
-  type: INDEXEDDB
+  type: StorageType.INDEXEDDB
 });
 ```
 
@@ -175,7 +180,7 @@ of your store which can be extremely useful to track changes in the schema and o
 const todo = new ClientStore("todo", {
   $name: String
 }, {
-  type: INDEXEDDB,
+  type: StorageType.INDEXEDDB,
   version: 1
 });
 ```
@@ -189,7 +194,7 @@ const todo = new ClientStore("todo", {
   $name: String,
   description: "No Description" // new schema key
 }, {
-  type: INDEXEDDB,
+  type: StorageType.INDEXEDDB,
   version: 2 // update
 });
 ```
