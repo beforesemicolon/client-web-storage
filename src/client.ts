@@ -7,6 +7,7 @@ import {SchemaValue} from './SchemaValue';
 import {ClientStore} from './ClientStore';
 import {AppState} from './AppState';
 import {EventType, StorageType} from './types';
+import {DefaultStoreState, withClientStore} from './helpers/with-client-store';
 
 // @ts-ignore
 if (window) {
@@ -21,6 +22,8 @@ if (window) {
 		ClientStore,
 		EventType,
 		StorageType,
-		AppState
+		AppState,
+		withClientStore,
+		DefaultStoreState
 	}
 }
