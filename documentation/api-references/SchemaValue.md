@@ -65,7 +65,7 @@ new SchemaValue(SchemaId, true)
 ````
 
 ```ts
-new SchemaValue(ArrayOf(OneOf(String, Number)), false, [0, 1, 2])
+new SchemaValue(ArrayOf(OneOf([String, Number], "")), false, [0, 1, 2])
 ```
 
 ```ts

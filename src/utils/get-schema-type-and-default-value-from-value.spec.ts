@@ -140,9 +140,9 @@ describe('getSchemaTypeAndDefaultValueFromValue', () => {
 	});
 
 	it('should handle OneOf', () => {
-		let res = getSchemaTypeAndDefaultValueFromValue(OneOf(String, Number));
+		let res = getSchemaTypeAndDefaultValueFromValue(OneOf([String, Number], ""));
 
-		expect(res.defaultValue).toEqual(null);
+		expect(res.defaultValue).toEqual("");
 		expect(res.type?.name).toEqual('OneOf');
 	});
 

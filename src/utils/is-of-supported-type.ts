@@ -1,6 +1,5 @@
 import {SchemaValueConstructorType} from "../types";
 import {Schema} from "../Schema";
-import {isNil} from "./is-nil";
 import {Null} from "../CustomTypes/Null";
 
 export const isOfSupportedType = (type:  SchemaValueConstructorType | Schema<any>, value: any) => {

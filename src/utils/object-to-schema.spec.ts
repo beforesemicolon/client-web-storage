@@ -112,7 +112,7 @@ describe('objectToSchema', () => {
 				id: new SchemaValue(SchemaId, true),
 				name: new SchemaValue(String)
 			}),
-			status: OneOf(String, Number),
+			status: OneOf([String, Number], ""),
 			names: ArrayOf(String)
 		});
 		
@@ -123,7 +123,7 @@ describe('objectToSchema', () => {
 				name: ''
 			},
 			names: [],
-			status: null,
+			status: "",
 			user: {
 				id: expect.any(String),
 				name: ''

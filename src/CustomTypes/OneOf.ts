@@ -3,24 +3,29 @@ import {Schema} from "../Schema";
 import {CustomType} from "./CustomType";
 import {isObjectLiteral} from "../utils/is-object-literal";
 import {objectToSchema} from "../utils/object-to-schema";
+import {isSameValueType} from "../utils/is-same-value-type";
 
-export function OneOf(...types: Array<SchemaObjectLiteral | SchemaValueConstructorType | Schema<any>>): typeof CustomType {
+export function OneOf(types: Array<SchemaObjectLiteral | SchemaValueConstructorType | Schema<any>>, defaultValue: any): typeof CustomType {
 	if (types.length < 2) {
 		throw new Error('OneOf requires more than single type listed comma separated')
 	}
 	
 	types = types.map(t => {
 		if (isObjectLiteral(t)) {
-		  return objectToSchema("", t as SchemaObjectLiteral)
+			return objectToSchema("", t as SchemaObjectLiteral)
 		}
 		
 		return t;
 	})
 	
+	if (!types.some(t => isSameValueType(t as SchemaValueConstructorType, defaultValue))) {
+		throw new Error(`Default value specified in OneOf is not of matching type.`)
+	}
+	
 	const name = types
 		.map(t => {
 			if (t.name === 'OneOf') {
-		    throw new Error('Cannot nest "OneOf" types');
+				throw new Error('Cannot nest "OneOf" types');
 			}
 			
 			const tName = CustomType.getTypeName(t);
@@ -35,7 +40,7 @@ export function OneOf(...types: Array<SchemaObjectLiteral | SchemaValueConstruct
 	
 	const CustomTypeConstructor = class extends CustomType {
 		constructor() {
-			super(name, types, null);
+			super(name, types, defaultValue);
 		}
 	}
 	

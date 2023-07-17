@@ -1820,7 +1820,7 @@ describe('ClientStore', () => {
 	it('should handle null', async () => {
 		const data = new ClientStore<any>(`todo-${generateUUID()}`, {
 			name: String,
-			status: OneOf(Number, Null),
+			status: OneOf([Number, Null], null),
 			none: Null
 		});
 		

@@ -335,7 +335,7 @@ describe('Schema', () => {
 		
 		it('OneOf', () => {
 			let oneOfSchema = new Schema("array", {
-				data: new SchemaValue(OneOf(Number, String, Null))
+				data: new SchemaValue(OneOf([Number, String, Null], null))
 			})
 			
 			expect(oneOfSchema.toJSON()).toBeDefined()
@@ -372,12 +372,12 @@ describe('Schema', () => {
 			});
 			
 			oneOfSchema = new Schema("array", {
-				data: new SchemaValue(OneOf(userSchema, String), true)
+				data: new SchemaValue(OneOf([userSchema, String], ""), true)
 			});
 			
 			expect(oneOfSchema.toJSON()).toEqual({
 				"data": {
-					"defaultValue": null,
+					"defaultValue": "",
 					"required": true,
 					"type": "Schema<user> | String"
 				}
@@ -401,13 +401,13 @@ describe('Schema', () => {
 		
 		it('OneOf object literal', () => {
 			let oneOfSchema = new Schema("array", {
-				data: new SchemaValue(OneOf({$name: String}, String))
+				data: new SchemaValue(OneOf([{$name: String}, String], ""))
 			})
 			
 			expect(oneOfSchema.toJSON()).toBeDefined()
 			expect(oneOfSchema.toJSON()).toEqual({
 				"data": {
-					"defaultValue": null,
+					"defaultValue": "",
 					"required": false,
 					"type": "Schema | String"
 				},
@@ -437,12 +437,12 @@ describe('Schema', () => {
 			});
 
 			oneOfSchema = new Schema("array", {
-				data: new SchemaValue(OneOf(userSchema, String), true)
+				data: new SchemaValue(OneOf([userSchema, String], ""), true)
 			});
 
 			expect(oneOfSchema.toJSON()).toEqual({
 				"data": {
-					"defaultValue": null,
+					"defaultValue": "",
 					"required": true,
 					"type": "Schema<user> | String"
 				}
@@ -730,7 +730,7 @@ describe('Schema', () => {
 			user: new SchemaValue(userSchema, true),
 			selected: new SchemaValue(Boolean),
 			count: new SchemaValue(Number),
-			total: new SchemaValue(OneOf(String, Number)),
+			total: new SchemaValue(OneOf([String, Number], "")),
 			realTotal: new SchemaValue(Int32Array),
 			values: new SchemaValue(ArrayOf(Number)),
 			image: new SchemaValue(Blob),
@@ -774,7 +774,7 @@ describe('Schema', () => {
 				"type": "Boolean"
 			},
 			"total": {
-				"defaultValue": null,
+				"defaultValue": "",
 				"required": false,
 				"type": "String | Number"
 			},
@@ -824,7 +824,7 @@ describe('Schema', () => {
 			'    "total": {\n' +
 			'        "type": "String | Number",\n' +
 			'        "required": false,\n' +
-			'        "defaultValue": null\n' +
+			'        "defaultValue": \"\"\n' +
 			'    },\n' +
 			'    "realTotal": {\n' +
 			'        "type": "Int32Array",\n' +

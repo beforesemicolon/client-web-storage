@@ -101,24 +101,24 @@ describe('SchemaValue', () => {
 			"required": true,
 			"type": "Array<Schema>"
 		}))
-		expect((new SchemaValue(OneOf(String, Number), false, 12)).toJSON()).toEqual(expect.objectContaining({
+		expect((new SchemaValue(OneOf([String, Number], ""), false, 12)).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": 12,
 			"required": false,
 			"type": "String | Number"
 		}))
-		expect((new SchemaValue(OneOf(String, {name: String}), false, "john doe")).toJSON()).toEqual(expect.objectContaining({
+		expect((new SchemaValue(OneOf([String, {name: String}], ""), false, "john doe")).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": "john doe",
 			"required": false,
 			"type": "String | Schema"
 		}))
 		
-		expect((new SchemaValue(OneOf(Number, Null), false)).toJSON()).toEqual(expect.objectContaining({
-			"defaultValue": null,
+		expect((new SchemaValue(OneOf([Number, Null], 12), false)).toJSON()).toEqual(expect.objectContaining({
+			"defaultValue": 12,
 			"required": false,
 			"type": "Number | Null"
 		}))
 		
-		expect((new SchemaValue(ArrayOf(OneOf(String, Number)), false, [0, 1, 2])).toJSON()).toEqual(expect.objectContaining({
+		expect((new SchemaValue(ArrayOf(OneOf([String, Number], "")), false, [0, 1, 2])).toJSON()).toEqual(expect.objectContaining({
 			"defaultValue": [0, 1, 2],
 			"required": false,
 			"type": "Array<String | Number>"
@@ -150,10 +150,10 @@ describe('SchemaValue', () => {
 		expect(() => new SchemaValue(userSchema, true, {})).toThrowError(`Default value does not match type "Schema<user>"`)
 		expect(() => new SchemaValue(SchemaId, true, "sample")).toThrowError(`Default value does not match type "SchemaId"`)
 		expect(() => new SchemaValue(SchemaId, true, {} as any)).toThrowError(`Default value does not match type "SchemaId"`)
-		expect(() => new SchemaValue(OneOf(String), false, 12)).toThrowError(`OneOf requires more than single type listed comma separated`)
-		expect(() => new SchemaValue(OneOf(String, Boolean), false, 12)).toThrowError('Default value does not match type "String | Boolean"')
-		expect(() => new SchemaValue(OneOf(String, Boolean), false, false)).not.toThrowError()
-		expect(() => new SchemaValue(OneOf(String, OneOf(Number, Boolean)), false, false)).toThrowError('Cannot nest "OneOf" types')
+		expect(() => new SchemaValue(OneOf([String], ""), false, 12)).toThrowError(`OneOf requires more than single type listed comma separated`)
+		expect(() => new SchemaValue(OneOf([String, Boolean], ""), false, 12)).toThrowError('Default value does not match type "String | Boolean"')
+		expect(() => new SchemaValue(OneOf([String, Boolean], ""), false, false)).not.toThrowError()
+		expect(() => new SchemaValue(OneOf([String, OneOf([Number, Boolean], false)], ""), false, false)).toThrowError('Cannot nest "OneOf" types')
 		expect(() => new SchemaValue(ArrayOf(String), true, 12)).toThrowError('Default value does not match type "Array<String>"')
 		expect(() => new SchemaValue(ArrayOf(String), true)).not.toThrowError()
 		expect(() => new SchemaValue(Null, true)).not.toThrowError()

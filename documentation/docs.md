@@ -357,30 +357,30 @@ of data for your store.
 
 Below is all supported types compared to `typescript` to show that the difference is minimal
 
-| Typescript Example            | CWS/Javascript Example           | Type   | Store Default Value             |
-|-------------------------------|----------------------------------|--------|---------------------------------|
-| `boolean`                     | `Boolean`                        | Native | `false`                         |
-| `string`                      | `String`                         | Native | `""`                            |
-| `number`                      | `Number`                         | Native | `0`                             |
-| `null`                        | `Null`                           | CWS    | `null`                          |
-| `Date`                        | `Date`                           | Native | `null`                          |
-| `Array`                       | `Array`                          | Native | `[]`                            |
-| `Array<String>`               | `ArrayOf(String)`                | CWS    | `[]`                            |
-| `String &#124; Number`        | `OneOf(String, Number)`          | CWS    | `null`                          |
-| `Array<String &#124; Number>` | `ArrayOf(OneOf(String, Number))` | CWS    | `[]`                            |
-| `string`                      | `SchemaId`                       | CWS    | `(new SchemaId()).defaultValue` |
-| `Record<K, V>`                | `Schema`                         | CWS    | `{}`                            |
-| `Blob`                        | `Blob`                           | Native | `null`                          |
-| `ArrayBuffer`                 | `ArrayBuffer`                    | Native | `null`                          |
-| `Float32Array`                | `Float32Array`                   | Native | `new Float32Array()`            |
-| `Float64Array`                | `Float64Array`                   | Native | `new Float64Array()`            |
-| `Int8Array`                   | `Int8Array`                      | Native | `new Int8Array()`               |
-| `Int16Array`                  | `Int16Array`                     | Native | `new Int16Array()`              |
-| `Int32Array`                  | `Int32Array`                     | Native | `new Int32Array()`              |
-| `Uint8Array`                  | `Uint8Array`                     | Native | `new Uint8Array()`              |
-| `Uint8ClampedArray`           | `Uint8ClampedArray`              | Native | `new Uint8ClampedArray()`       |
-| `Uint16Array`                 | `Uint16Array`                    | Native | `new Uint16Array()`             |
-| `Uint32Array`                 | `Uint32Array`                    | Native | `new Uint32Array()`             |
+| Typescript Example            | CWS/Javascript Example                    | Type   | Store Default Value             |
+|-------------------------------|-------------------------------------------|--------|---------------------------------|
+| `boolean`                     | `Boolean`                                 | Native | `false`                         |
+| `string`                      | `String`                                  | Native | `""`                            |
+| `number`                      | `Number`                                  | Native | `0`                             |
+| `null`                        | `Null`                                    | CWS    | `null`                          |
+| `Date`                        | `Date`                                    | Native | `null`                          |
+| `Array`                       | `Array`                                   | Native | `[]`                            |
+| `Array<String>`               | `ArrayOf(String)`                         | CWS    | `[]`                            |
+| `String &#124; Number`        | `OneOf([String, Number], defaultValue)`   | CWS    | `defaultValue` set              |
+| `Array<String &#124; Number>` | `ArrayOf(OneOf([String, Number], ""))`    | CWS    | `[]`                            |
+| `string`                      | `SchemaId`                                | CWS    | `(new SchemaId()).defaultValue` |
+| `Record<K, V>`                | `Schema`                                  | CWS    | `{}`                            |
+| `Blob`                        | `Blob`                                    | Native | `null`                          |
+| `ArrayBuffer`                 | `ArrayBuffer`                             | Native | `null`                          |
+| `Float32Array`                | `Float32Array`                            | Native | `new Float32Array()`            |
+| `Float64Array`                | `Float64Array`                            | Native | `new Float64Array()`            |
+| `Int8Array`                   | `Int8Array`                               | Native | `new Int8Array()`               |
+| `Int16Array`                  | `Int16Array`                              | Native | `new Int16Array()`              |
+| `Int32Array`                  | `Int32Array`                              | Native | `new Int32Array()`              |
+| `Uint8Array`                  | `Uint8Array`                              | Native | `new Uint8Array()`              |
+| `Uint8ClampedArray`           | `Uint8ClampedArray`                       | Native | `new Uint8ClampedArray()`       |
+| `Uint16Array`                 | `Uint16Array`                             | Native | `new Uint16Array()`             |
+| `Uint32Array`                 | `Uint32Array`                             | Native | `new Uint32Array()`             |
 
 ### Schema Instance
 The schema object will be converted to a `Schema` instance under the hood, and it is a much easier way to define a store

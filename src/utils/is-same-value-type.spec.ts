@@ -16,9 +16,9 @@ describe("isSameValueType", () => {
 	});
 	
 	it('should handle OneOf', () => {
-		expect(isSameValueType(OneOf(String, Number), null)).toBeFalsy()
-		expect(isSameValueType(OneOf(String, Number), 12)).toBeTruthy()
-		expect(isSameValueType(OneOf(String, Number), "str")).toBeTruthy()
+		expect(isSameValueType(OneOf([String, Number], ""), null)).toBeFalsy()
+		expect(isSameValueType(OneOf([String, Number], ""), 12)).toBeTruthy()
+		expect(isSameValueType(OneOf([String, Number], ""), "str")).toBeTruthy()
 	});
 	
 	it('should handle SchemaId', () => {
