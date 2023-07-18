@@ -35,30 +35,26 @@ export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState
 		loadItems()
 	}
 	
+	const updateStatuses = (events: Set<EventType>) => {
+		data.processing = events.size > 0;
+		data.creatingItems = events.has(EventType.CREATED);
+		data.updatingItems = events.has(EventType.UPDATED);
+		data.deletingItems = events.has(EventType.REMOVED);
+		data.loadingItems = events.has(EventType.LOADED);
+		data.clearingItems = events.has(EventType.CLEARED);
+	}
+	
 	return store.subscribe(async (eventType, details) => {
+		updateStatuses(new Set(details as EventType[]))
+		
 		switch (eventType) {
 			case EventType.READY:
 				data.items = await store.getItems();
-				cb(data);
-				break;
-			case EventType.PROCESSING_EVENTS:
-				const events = new Set(details as EventType[]);
-				
-				data.processing = events.size > 0;
-				data.creatingItems = events.has(EventType.CREATED);
-				data.updatingItems = events.has(EventType.UPDATED);
-				data.deletingItems = events.has(EventType.REMOVED);
-				data.loadingItems = !data.items.length && events.has(EventType.LOADED);
-				data.clearingItems = events.has(EventType.CLEARED);
-				
-				cb(data);
 				break;
 			case EventType.ERROR:
 				const {action, error} = details as ActionEventData<T>;
 				
 				data.error = new Error(`${action}: ${error?.message}`);
-				
-				cb(data);
 				break;
 			case EventType.CREATED:
 			case EventType.UPDATED:
@@ -66,8 +62,9 @@ export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState
 			case EventType.LOADED:
 			case EventType.CLEARED:
 				data = {...data, items: await store.getItems(), error: null};
-				cb(data);
 				break;
 		}
+		
+		cb(data);
 	})
 }
