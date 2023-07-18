@@ -58,11 +58,19 @@ export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState
 				updateStatuses(new Set(details as EventType[]))
 				break;
 			case EventType.CREATED:
+				data = {...data, creatingItems: false, items: await store.getItems(), error: null};
+				break;
 			case EventType.UPDATED:
+				data = {...data, updatingItems: false, items: await store.getItems(), error: null};
+				break;
 			case EventType.REMOVED:
+				data = {...data, deletingItems: false, items: await store.getItems(), error: null};
+				break;
 			case EventType.LOADED:
+				data = {...data, loadingItems: false, items: await store.getItems(), error: null};
+				break;
 			case EventType.CLEARED:
-				data = {...data, items: await store.getItems(), error: null};
+				data = {...data, clearingItems: false, items: await store.getItems(), error: null};
 				break;
 		}
 		

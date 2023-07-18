@@ -630,24 +630,16 @@ export class ClientStore<T> {
 		}
 		
 		try {
-			const result = await cb();
-			this.#processes.delete(processId);
-			
-			if (!this.processing) {
-				this.#broadcast(EventType.PROCESSING, false);
-				this.#broadcast(EventType.PROCESSING_EVENTS, this.processingEvents);
-			}
-			
-			return result;
+			return await cb();
 		} catch (e) {
+			throw e;
+		} finally {
 			this.#processes.delete(processId);
 			
 			if (!this.processing) {
 				this.#broadcast(EventType.PROCESSING, false);
 				this.#broadcast(EventType.PROCESSING_EVENTS, this.processingEvents);
 			}
-			
-			throw e;
 		}
 	}
 }
