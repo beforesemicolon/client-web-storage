@@ -45,8 +45,6 @@ export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState
 	}
 	
 	return store.subscribe(async (eventType, details) => {
-		updateStatuses(new Set(details as EventType[]))
-		
 		switch (eventType) {
 			case EventType.READY:
 				data.items = await store.getItems();
@@ -55,6 +53,9 @@ export const withClientStore = <T,>(store: ClientStore<T>, cb: (data: StoreState
 				const {action, error} = details as ActionEventData<T>;
 				
 				data.error = new Error(`${action}: ${error?.message}`);
+				break;
+			case EventType.PROCESSING_EVENTS:
+				updateStatuses(new Set(details as EventType[]))
 				break;
 			case EventType.CREATED:
 			case EventType.UPDATED:
