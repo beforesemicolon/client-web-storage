@@ -32,7 +32,7 @@
     "@types/localforage": "0.0.34",
     "@types/node": "^18.11.18",
     "@types/react": "^18.0.27",
-    "esbuild": "^0.14.28",
+    "esbuild": "^0.25.0",
     "fake-indexeddb": "^4.0.1",
     "jest": "^27.5.1",
     "jest-canvas-mock": "^2.3.1",
