@@ -28,7 +28,7 @@
   "devDependencies": {
     "@types/core-js": "^2.5.5",
     "@types/jest": "^27.4.1",
-    "@types/jsdom": "^16.2.14",
+    "@types/jsdom": "^30.0.0",
     "@types/localforage": "0.0.34",
     "@types/node": "^18.11.18",
     "@types/react": "^18.0.27",
