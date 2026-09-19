@@ -30,7 +30,7 @@
     "@types/jest": "^27.4.1",
     "@types/jsdom": "^16.2.14",
     "@types/localforage": "0.0.34",
-    "@types/node": "^18.11.18",
+    "@types/node": "^24.0.0",
     "@types/react": "^18.0.27",
     "esbuild": "^0.28.1",
     "fake-indexeddb": "^4.0.1",
