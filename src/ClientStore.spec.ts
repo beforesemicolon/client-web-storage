@@ -44,6 +44,7 @@ interface ToDoExtended {
 
 describe('ClientStore', () => {
 	afterEach(() => {
+		jest.useRealTimers();
 		jest.clearAllMocks();
 	})
 	
@@ -242,45 +243,45 @@ describe('ClientStore', () => {
 		
 		it('if created without or invalid schema', () => {
 			// @ts-ignore
-			expect(() => new ClientStore("todo")).toThrowError('Invalid "Schema" instance or object')
+			expect(() => new ClientStore("todo")).toThrow('Invalid "Schema" instance or object')
 			// @ts-ignore
-			expect(() => new ClientStore("todo", () => {})).toThrowError('Invalid "Schema" instance or object')
+			expect(() => new ClientStore("todo", () => {})).toThrow('Invalid "Schema" instance or object')
 			// @ts-ignore
-			expect(() => new ClientStore("todo", null)).toThrowError('Invalid "Schema" instance or object')
+			expect(() => new ClientStore("todo", null)).toThrow('Invalid "Schema" instance or object')
 		});
 		
 		it('if created with invalid schema', () => {
 			expect(() => new ClientStore("todo", {
 				// @ts-ignore
 				name: Function
-			})).toThrowError('Unsupported Schema Type => key: "name", type: "Function" (estimated)')
+			})).toThrow('Unsupported Schema Type => key: "name", type: "Function" (estimated)')
 			
 			expect(() => new ClientStore("todo", new Schema("todo", {
 				// @ts-ignore
 				name: new SchemaValue(Function)
-			}))).toThrowError('Invalid SchemaValue type provided. Received "Function"')
+			}))).toThrow('Invalid SchemaValue type provided. Received "Function"')
 		});
 		
 		it('if created with blank name', () => {
-			expect(() => new ClientStore("", {})).toThrowError('ClientStore must have a non-blank name')
+			expect(() => new ClientStore("", {})).toThrow('ClientStore must have a non-blank name')
 		});
 		
 		it('if invalid fields on create', async () => {
 			// @ts-ignore
 			await expect(() => store.createItem({name: 12}))
-				.rejects.toThrowError('Missing or invalid field types for "name, user" keys. Should be')
+				.rejects.toThrow('Missing or invalid field types for "name, user" keys. Should be')
 		});
 		
 		it('if unknown field is provided on create', async () => {
 			// @ts-ignore
 			await expect(() => store.createItem({...partialItem, item: 12}))
-				.rejects.toThrowError('Missing or invalid field types for "item" keys. Should be [item, undefined]')
+				.rejects.toThrow('Missing or invalid field types for "item" keys. Should be [item, undefined]')
 		});
 		
 		it('if invalid value on create', async () => {
 			// @ts-ignore
 			await expect(() => store.createItem(null))
-				.rejects.toThrowError('Invalid "value" provided to create item => null')
+				.rejects.toThrow('Invalid "value" provided to create item => null')
 		});
 		
 		it('if invalid fields on update', async () =>{
@@ -288,7 +289,7 @@ describe('ClientStore', () => {
 			
 			// @ts-ignore
 			await expect(() => store.updateItem(item._id, {name: 12}))
-				.rejects.toThrowError('Missing or invalid field types for "name" keys. Should be')
+				.rejects.toThrow('Missing or invalid field types for "name" keys. Should be')
 		});
 		
 		it('if unknown field is provided on update', async () =>{
@@ -296,7 +297,7 @@ describe('ClientStore', () => {
 			
 			// @ts-ignore
 			await expect(() => store.updateItem(item._id, {item: 12}))
-				.rejects.toThrowError('Missing or invalid field types for "item" keys. Should be [item, undefined]')
+				.rejects.toThrow('Missing or invalid field types for "item" keys. Should be [item, undefined]')
 		});
 		
 		it('if invalid value on update', async () =>{
@@ -304,25 +305,25 @@ describe('ClientStore', () => {
 			
 			// @ts-ignore
 			await expect(() => store.updateItem(item._id, null))
-				.rejects.toThrowError('Invalid "value" provided to update item => null')
+				.rejects.toThrow('Invalid "value" provided to update item => null')
 		});
 		
 		it('if invalid fields on load', async () =>{
 			// @ts-ignore
 			await expect(() => store.loadItems([{name: 12}]))
-				.rejects.toThrowError('Missing or invalid field types for "name, user.name" keys. Should be ')
+				.rejects.toThrow('Missing or invalid field types for "name, user.name" keys. Should be ')
 		});
 		
 		it('if unknown field is provided on load', async () =>{
 			// @ts-ignore
 			await expect(() => store.loadItems([{...partialItem, item: 12}]))
-				.rejects.toThrowError('Missing or invalid field types for "item" keys. Should be [item, undefined]')
+				.rejects.toThrow('Missing or invalid field types for "item" keys. Should be [item, undefined]')
 		});
 		
 		it('if invalid value on load', async () => {
 			// @ts-ignore
 			await expect(() => store.loadItems([null]))
-				.rejects.toThrowError('Invalid "value" provided to load item => null')
+				.rejects.toThrow('Invalid "value" provided to load item => null')
 		});
 		
 		it('if create item fails', async () => {
@@ -331,7 +332,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.createItem(partialItem))
-				.rejects.toThrowError('failed')
+				.rejects.toThrow('failed')
 			
 			clearIntercept()
 		});
@@ -345,7 +346,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.createItem(partialItem))
-				.rejects.toThrowError('Missing or invalid field types for "unknown" keys. Should be [unknown, undefined]')
+				.rejects.toThrow('Missing or invalid field types for "unknown" keys. Should be [unknown, undefined]')
 			
 			clearIntercept()
 		});
@@ -358,7 +359,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.updateItem(item._id, {name: "different"}))
-				.rejects.toThrowError('failed')
+				.rejects.toThrow('failed')
 			
 			clearIntercept()
 		});
@@ -374,7 +375,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.updateItem(item._id, {name: "different"}))
-				.rejects.toThrowError('Missing or invalid field types for "unknown, name, user" keys. Should be [unknown, undefined]')
+				.rejects.toThrow('Missing or invalid field types for "unknown, name, user" keys. Should be [unknown, undefined]')
 			
 			clearIntercept()
 		});
@@ -387,7 +388,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.removeItem(item._id))
-				.rejects.toThrowError('failed')
+				.rejects.toThrow('failed')
 			
 			clearIntercept()
 		});
@@ -400,7 +401,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.clear())
-				.rejects.toThrowError('failed')
+				.rejects.toThrow('failed')
 			
 			clearIntercept()
 		});
@@ -411,7 +412,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.loadItems([partialItem]))
-				.rejects.toThrowError('failed')
+				.rejects.toThrow('failed')
 			
 			clearIntercept()
 		});
@@ -422,7 +423,7 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.loadItems([partialItem]))
-				.rejects.toThrowError('Missing or invalid field types for "name, user.name" keys. Should be')
+				.rejects.toThrow('Missing or invalid field types for "name, user.name" keys. Should be')
 			
 			clearIntercept()
 		});
@@ -434,40 +435,40 @@ describe('ClientStore', () => {
 			})
 			
 			await expect(() => store.loadItems([partialItem]))
-				.rejects.toThrowError('Invalid "value" returned via load intercept handler - item => undefined')
+				.rejects.toThrow('Invalid "value" returned via load intercept handler - item => undefined')
 			
 			clearIntercept()
 		});
 		
 		it('if invalid subscribe handler provided', () => {
 			// @ts-ignore
-			expect(() => store.subscribe(null)).toThrowError('Received invalid "subscribe" handler => null')
+			expect(() => store.subscribe(null)).toThrow('Received invalid "subscribe" handler => null')
 		});
 		
 		it('if invalid beforeChange handler provided', () => {
 			// @ts-ignore
-			expect(() => store.beforeChange(null)).toThrowError('Received invalid function "beforeChange" event handler => null')
+			expect(() => store.beforeChange(null)).toThrow('Received invalid function "beforeChange" event handler => null')
 		});
 		
 		it('if invalid ON handler or event type provided', () => {
 			// @ts-ignore
-			expect(() => store.on("event", () => {})).toThrowError('Received unknown ON "event" event')
+			expect(() => store.on("event", () => {})).toThrow('Received unknown ON "event" event')
 			// @ts-ignore
-			expect(() => store.on(EventType.CREATED, null)).toThrowError('Received invalid ON "created" event handler => null')
+			expect(() => store.on(EventType.CREATED, null)).toThrow('Received invalid ON "created" event handler => null')
 		});
 		
 		it('if invalid OFF handler or event type provided', () => {
 			// @ts-ignore
-			expect(() => store.off("event", () => {})).toThrowError('Received unknown OFF "event" event')
+			expect(() => store.off("event", () => {})).toThrow('Received unknown OFF "event" event')
 			// @ts-ignore
-			expect(() => store.off(EventType.CREATED, null)).toThrowError('Received invalid OFF "created" event handler => null')
+			expect(() => store.off(EventType.CREATED, null)).toThrow('Received invalid OFF "created" event handler => null')
 		});
 		
 		it('if invalid INTERCEPT handler or event type provided', () => {
 			// @ts-ignore
-			expect(() => store.intercept("event", () => {})).toThrowError('Received unknown INTERCEPT "event" event')
+			expect(() => store.intercept("event", () => {})).toThrow('Received unknown INTERCEPT "event" event')
 			// @ts-ignore
-			expect(() => store.intercept(EventType.CREATED, null)).toThrowError('Received invalid INTERCEPT "created" event handler => null')
+			expect(() => store.intercept(EventType.CREATED, null)).toThrow('Received invalid INTERCEPT "created" event handler => null')
 		});
 	})
 	
@@ -712,6 +713,7 @@ describe('ClientStore', () => {
 	})
 	
 	it('should handle loading items', async () => {
+		jest.useFakeTimers({now: new Date('2026-01-01T00:00:00.000Z')});
 		const {
 			readyEventHandler,
 			processingEventHandler,
@@ -810,6 +812,9 @@ describe('ClientStore', () => {
 		])
 
 		expect(await todoStore.getItems()).toEqual(items);
+
+		// Advance the clock so updates have a distinct timestamp on fast runners.
+		jest.advanceTimersByTime(1000);
 
 		// should update existing items
 		const updatedItems = await todoStore.loadItems(items.map(item => ({
@@ -1213,7 +1218,7 @@ describe('ClientStore', () => {
 					}
 				}
 				
-				await expect(todoStore.createItem(data)).rejects.toThrowError("failed");
+				await expect(todoStore.createItem(data)).rejects.toThrow("failed");
 				
 				expect(beforeChangeHandler).not.toHaveBeenCalled();
 				expect(processingEventHandler).toHaveBeenCalledWith(true);
@@ -1257,7 +1262,7 @@ describe('ClientStore', () => {
 					name: "go to gym at 2"
 				}
 				
-				await expect(todoStore.updateItem(newTodo._id, data)).rejects.toThrowError("failed")
+				await expect(todoStore.updateItem(newTodo._id, data)).rejects.toThrow("failed")
 				
 				expect(beforeChangeHandler).toHaveBeenCalledWith(EventType.CREATED, {
 					data: newTodo,
@@ -1301,7 +1306,7 @@ describe('ClientStore', () => {
 				
 				processingEventHandler.mockClear()
 				
-				await expect(todoStore.removeItem(newTodo._id)).rejects.toThrowError("failed")
+				await expect(todoStore.removeItem(newTodo._id)).rejects.toThrow("failed")
 				
 				expect(beforeChangeHandler).toHaveBeenCalledWith(EventType.CREATED, {
 					data: newTodo,
@@ -1348,7 +1353,7 @@ describe('ClientStore', () => {
 					}
 				];
 				
-				await expect(todoStore.loadItems(data)).rejects.toThrowError("failed")
+				await expect(todoStore.loadItems(data)).rejects.toThrow("failed")
 				
 				expect(beforeChangeHandler).not.toHaveBeenCalled();
 				expect(processingEventHandler).toHaveBeenCalledWith(true);
@@ -1401,7 +1406,7 @@ describe('ClientStore', () => {
 				
 				processingEventHandler.mockClear()
 				
-				await expect(todoStore.clear()).rejects.toThrowError("failed")
+				await expect(todoStore.clear()).rejects.toThrow("failed")
 				
 				expect(beforeChangeHandler).toHaveBeenCalledWith(EventType.LOADED, {
 					data: items,

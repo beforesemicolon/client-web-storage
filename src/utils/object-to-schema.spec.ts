@@ -132,8 +132,8 @@ describe('objectToSchema', () => {
 	});
 	
 	it('should throw if invalid object is provided', () => {
-		expect(() => objectToSchema("sample", {})).toThrowError('Invalid "Schema" instance or object')
+		expect(() => objectToSchema("sample", {})).toThrow('Invalid "Schema" instance or object')
 		// @ts-ignore
-		expect(() => objectToSchema("sample", null)).toThrowError('Invalid "Schema" instance or object')
+		expect(() => objectToSchema("sample", null)).toThrow('Invalid "Schema" instance or object')
 	});
 })

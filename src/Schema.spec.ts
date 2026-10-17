@@ -11,17 +11,17 @@ describe('Schema', () => {
 		expect(() => new Schema('sample', {
 			// @ts-ignore
 			val: Symbol('invalid')
-		})).toThrowError('Field "val" is not a SchemaValue')
+		})).toThrow('Field "val" is not a SchemaValue')
 		
 		expect(() => new Schema('sample', {
 			// @ts-ignore
 			fn: Function
-		})).toThrowError('Field "fn" is not a SchemaValue')
+		})).toThrow('Field "fn" is not a SchemaValue')
 		
 		expect(() => new Schema('sample', {
 			// @ts-ignore
 			fn: new SchemaValue(Function)
-		})).toThrowError('Invalid SchemaValue type provided. Received "Function"')
+		})).toThrow('Invalid SchemaValue type provided. Received "Function"')
 	});
 	
 	describe('should handle simple types', () => {
