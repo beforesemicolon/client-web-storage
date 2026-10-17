@@ -31,10 +31,10 @@ describe('OneOf', () => {
 	});
 	
 	it('should throw error if only one type is provided', () => {
-		expect(() => getOneOfInstance([String], "")).toThrowError('OneOf requires more than single type listed comma separated');
+		expect(() => getOneOfInstance([String], "")).toThrow('OneOf requires more than single type listed comma separated');
 	});
 	
 	it('should throw error if provided a OneOf', () => {
-		expect(() => getOneOfInstance([OneOf([Date, Boolean], false), Number], 12)).toThrowError('Cannot nest "OneOf" types');
+		expect(() => getOneOfInstance([OneOf([Date, Boolean], false), Number], 12)).toThrow('Cannot nest "OneOf" types');
 	});
 })
