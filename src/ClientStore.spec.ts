@@ -546,6 +546,13 @@ describe('ClientStore', () => {
 	
 	describe('should CRUD store', () => {
 		const crud = async (todoStore: ClientStore<ToDoExtended | ToDo>) => {
+			const createdAt = new Date('2026-01-01T00:00:00.000Z');
+			const updatedAt = new Date('2026-01-01T00:00:01.000Z');
+			// Keep IndexedDB's asynchronous scheduling running while controlling Date.
+			jest.useFakeTimers({
+				now: createdAt,
+				doNotFake: ['setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout']
+			});
 			const {
 				readyEventHandler,
 				processingEventHandler,
@@ -589,9 +596,9 @@ describe('ClientStore', () => {
 			processingEventHandler.mockClear()
 			
 			expect(newTodo).toEqual({
-				[todoStore.createdDateKeyName]: expect.any(Date),
+				[todoStore.createdDateKeyName]: createdAt,
 				[todoStore.idKeyName]: expect.any(String),
-				[todoStore.updatedDateKeyName]: expect.any(Date),
+				[todoStore.updatedDateKeyName]: createdAt,
 				"description": "",
 				"name": "Buy groceries",
 				"selected": false,
@@ -604,6 +611,7 @@ describe('ClientStore', () => {
 			
 			expect(await todoStore.getItem(<string>newTodo[todoStore.idKeyName])).toEqual(newTodo)
 			
+			jest.setSystemTime(updatedAt);
 			const updatedTodo = await todoStore.updateItem(<string>newTodo[todoStore.idKeyName], {
 				name: "Buy tomatoes and potatoes",
 				description: "sweet potatoes and green tomatoes"
@@ -634,8 +642,8 @@ describe('ClientStore', () => {
 					"name": "John Doe"
 				}
 			})
-			expect(`${updatedTodo[todoStore.createdDateKeyName]}`).toEqual(`${newTodo[todoStore.createdDateKeyName]}`)
-			expect( `${updatedTodo[todoStore.updatedDateKeyName]}`).toEqual(`${newTodo[todoStore.updatedDateKeyName]}`)
+			expect(updatedTodo[todoStore.createdDateKeyName]).toEqual(newTodo[todoStore.createdDateKeyName])
+			expect(updatedTodo[todoStore.updatedDateKeyName]).toEqual(updatedAt)
 			
 			const res = await todoStore.removeItem(<string>newTodo[todoStore.idKeyName]);
 			
