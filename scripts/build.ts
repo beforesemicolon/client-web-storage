@@ -38,6 +38,7 @@ async function run() {
 		console.log(publishCommand);
 	} catch (e) {
 		console.error(e);
+		process.exitCode = 1;
 	}
 }
 
