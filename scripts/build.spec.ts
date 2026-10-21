@@ -2,16 +2,20 @@
 jest.mock('child_process', () => ({exec: jest.fn()}));
 
 const initialExitCode = process.exitCode;
+const initialLocal = process.env.LOCAL;
 
 beforeEach(() => {
   jest.resetModules();
   process.exitCode = undefined;
+  delete process.env.LOCAL;
   jest.spyOn(console, 'log').mockImplementation(() => {});
   jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
   process.exitCode = initialExitCode;
+  if (initialLocal === undefined) delete process.env.LOCAL;
+  else process.env.LOCAL = initialLocal;
   jest.restoreAllMocks();
 });
 
@@ -39,4 +43,16 @@ test('failed compilation returns a failing exit status and stops packaging', asy
   expect(console.error).toHaveBeenCalledWith(expect.any(Error));
   expect(execMock).toHaveBeenCalledTimes(3);
   expect(console.log).not.toHaveBeenCalled();
+});
+
+test('local builds enable the existing unminified build mode', async () => {
+  const {scripts} = require('../package.json');
+  expect(scripts['build:local']).toBe('LOCAL=true npm run build');
+  expect(scripts.local).toContain('npm run build:local');
+
+  process.env.LOCAL = 'true';
+  const execMock = await runBuild();
+  expect(execMock.mock.calls[1][0]).toContain('esbuild src/client.ts --bundle');
+  expect(execMock.mock.calls[1][0]).not.toContain('--minify');
+  expect(process.exitCode).toBeUndefined();
 });
