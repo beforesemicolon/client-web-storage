@@ -21,6 +21,7 @@
   "license": "MIT",
   "scripts": {
     "build": "ts-node scripts/build.ts",
+    "build:local": "LOCAL=true npm run build",
     "local": "nodemon --watch src -e ts --exec 'npm run build:local && npm pack'",
     "test": "jest --coverage",
     "test:watch": "jest --watch"
